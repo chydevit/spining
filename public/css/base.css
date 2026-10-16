@@ -1003,8 +1003,8 @@ textarea {
   pointer-events: none;
   border-radius: inherit;
   background:
-    radial-gradient(60% 90% at 10% 40%, rgba(255, 255, 255, 0.5) 0 18%, transparent 19%),
-    radial-gradient(40% 70% at 94% 55%, rgba(255, 255, 255, 0.28) 0 12%, transparent 13%),
+    linear-gradient(100deg, transparent 5%, rgba(255, 255, 255, 0.45) 5% 10%, transparent 10% 14%, rgba(255, 255, 255, 0.28) 14% 16%, transparent 16%),
+    linear-gradient(100deg, transparent 88%, rgba(255, 255, 255, 0.25) 88% 91%, transparent 91%),
     radial-gradient(120% 60% at 50% 0%, rgba(255, 255, 255, 0.4), transparent 60%),
     linear-gradient(180deg, transparent 70%, rgba(6, 117, 126, 0.12));
   box-shadow: inset 0 0 2.4cqw rgba(6, 117, 126, 0.25);
@@ -1116,7 +1116,7 @@ textarea {
   top: 0.9cqw;
   left: 0;
   right: 0;
-  z-index: 3;
+  z-index: 4;
   font-size: 2.2cqw;
   font-weight: 900;
   letter-spacing: 0.2em;
@@ -1239,14 +1239,15 @@ textarea {
   border: 0.6cqw dashed rgba(5, 143, 154, 0.45);
 }
 .cap-plate::after {
-  content: 'TURN ↻';
+  /* arrowhead on the ring: turn clockwise */
+  content: '';
   position: absolute;
-  left: 2cqw;
-  bottom: 1cqw;
-  font-size: 2cqw;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  color: #058f9a;
+  left: calc(50% - 2.5cqw + 6.9cqw - 1.2cqw);
+  top: calc(50% - 6.9cqw - 1.2cqw);
+  border-top: 1.2cqw solid transparent;
+  border-bottom: 1.2cqw solid transparent;
+  border-left: 2cqw solid #058f9a;
+  transform: rotate(45deg);
 }
 .is-spinning .cap-plate::before {
   animation: turn-ring 1.5s linear;

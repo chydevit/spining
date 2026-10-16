@@ -53,6 +53,24 @@ function sslFor(url) {
   return { rejectUnauthorized: false };
 }
 
+/** Says what is wrong with a malformed DATABASE_URL without revealing the password. */
+function describeBadUrl(url) {
+  const problems = [];
+  if (!url.trim()) return 'it is empty';
+  if (url !== url.trim()) problems.push('it has spaces or line breaks at the start or end');
+  const v = url.trim();
+  if (/^["']/.test(v)) problems.push('it is wrapped in quotes');
+  if (/^[A-Z_]+=/.test(v)) problems.push(`it starts with "${v.split('=')[0]}="`);
+  if (/\s/.test(v)) problems.push('it contains spaces or line breaks');
+  const scheme = v.match(/^([a-z][a-z0-9+.-]*):\/\//i)?.[1];
+  if (!scheme) problems.push('it does not start with postgresql://');
+  else if (!/^postgres(ql)?$/i.test(scheme)) problems.push(`it starts with "${scheme}://"`);
+  const host = v.split('@').pop().split(/[/?]/)[0];
+  if (v.includes('@')) problems.push(`host part is "${host}"`);
+  else problems.push('it has no "@" (USER:PASSWORD@HOST)');
+  return `${problems.join('; ')}; length ${v.length}`;
+}
+
 export class PgStore {
   kind = 'postgres';
 
@@ -74,8 +92,8 @@ export class PgStore {
       if (!/^postgres(ql)?:$/.test(u.protocol) || !u.hostname) throw new Error();
     } catch {
       throw new Error(
-        'DATABASE_URL is not a valid PostgreSQL URL. Expected postgresql://USER:PASSWORD@HOST/DATABASE ' +
-        '(no quotes, spaces or "DATABASE_URL=" in the value). Copy it again from the database page in Render.'
+        `DATABASE_URL is not a valid PostgreSQL URL (${describeBadUrl(this.url)}). ` +
+        'Expected postgresql://USER:PASSWORD@HOST/DATABASE. Copy it again from the database page in Render.'
       );
     }
     const makePool = (ssl) => {
