@@ -2,8 +2,9 @@
 // Same interface as Wheel / SlotMachine / CapsuleMachine.
 // A ball shoots up the side lane, bounces down through the pegs and lands in the
 // slot of the result the server already chose (the path is planned to end there).
-import { labelColorFor, monogram } from './wheel.js';
+import { labelColorFor, monogram, pictureBox } from './wheel.js';
 import { getStyle, resolveColors } from './styles.js';
+import { brandIcon } from './brand.js';
 
 // Board geometry, in % of the board box.
 const ROWS = 8;
@@ -31,6 +32,33 @@ const rowY = (r) => TOP + ((BOTTOM - TOP) * r) / (ROWS - 1);
 const pegCols = (r) => r + 3;
 const pegX = (r, c) => CX + (c - (r + 2) / 2) * SPACING;
 
+/**
+ * Marquee bulbs set into a rounded frame, numbered clockwise so they can chase.
+ * rt / rb: corner radii of the frame's centre line (cqw); across / down: bulbs per straight edge.
+ * Keep the total (4 corners + 2 × across + 2 × down) a multiple of 3 so the chase loops evenly.
+ */
+export function marqueeLights({ rt, rb, across, down }) {
+  const layer = h('div', 'pk-lights');
+  layer.setAttribute('aria-hidden', 'true');
+  const c = (r) => `${(r * (1 - Math.SQRT1_2)).toFixed(2)}cqw`; // bulb on the corner arc at 45°
+  const along = (from, to, n, k) => `calc(${from}cqw + (100% - ${from + to}cqw) * ${((k + 0.5) / n).toFixed(4)})`;
+  const spots = [[c(rt), c(rt)]];
+  for (let k = 0; k < across; k++) spots.push([along(rt, rt, across, k), '0%']);
+  spots.push([`calc(100% - ${c(rt)})`, c(rt)]);
+  for (let k = 0; k < down; k++) spots.push(['100%', along(rt, rb, down, k)]);
+  spots.push([`calc(100% - ${c(rb)})`, `calc(100% - ${c(rb)})`]);
+  for (let k = across - 1; k >= 0; k--) spots.push([along(rb, rb, across, k), '100%']);
+  spots.push([c(rb), `calc(100% - ${c(rb)})`]);
+  for (let k = down - 1; k >= 0; k--) spots.push(['0%', along(rt, rb, down, k)]);
+  spots.forEach(([left, top], i) => {
+    const bulb = h('span', `pk-bulb pk-bulb-${i % 3}${i % 2 ? ' pk-bulb-odd' : ''}`);
+    bulb.style.left = left;
+    bulb.style.top = top;
+    layer.append(bulb);
+  });
+  return layer;
+}
+
 export class PlinkoBoard {
   constructor(stage, { onTick, label = 'Prize drop board', style } = {}) {
     this.stage = stage;
@@ -47,10 +75,11 @@ export class PlinkoBoard {
 
     const sign = h('div', 'pk-sign');
     const logo = h('img', 'pk-sign-logo');
-    logo.src = '/assets/pharmkulen-icon.png';
+    logo.src = brandIcon();
+    logo.dataset.brand = 'icon';
     logo.alt = '';
     // Sign frame: 4cqw corners minus half its 0.8cqw border; 4 + 2×9 + 2×1 = 24 bulbs.
-    sign.append(this.lights({ rt: 3.6, rb: 3.6, across: 9, down: 1 }), logo, h('span', 'pk-sign-big', 'Lucky Drop'));
+    sign.append(marqueeLights({ rt: 3.6, rb: 3.6, across: 9, down: 1 }), logo, h('span', 'pk-sign-big', 'Lucky Drop'));
 
     const cabinet = h('div', 'pk-cabinet');
     this.board = h('div', 'pk-board');
@@ -82,33 +111,6 @@ export class PlinkoBoard {
     this.parkBall();
   }
 
-  /**
-   * Marquee bulbs set into a rounded frame, numbered clockwise so they can chase.
-   * rt / rb: corner radii of the frame's centre line (cqw); across / down: bulbs per straight edge.
-   * Keep the total (4 corners + 2 × across + 2 × down) a multiple of 3 so the chase loops evenly.
-   */
-  lights({ rt, rb, across, down }) {
-    const layer = h('div', 'pk-lights');
-    layer.setAttribute('aria-hidden', 'true');
-    const c = (r) => `${(r * (1 - Math.SQRT1_2)).toFixed(2)}cqw`; // bulb on the corner arc at 45°
-    const along = (from, to, n, k) => `calc(${from}cqw + (100% - ${from + to}cqw) * ${((k + 0.5) / n).toFixed(4)})`;
-    const spots = [[c(rt), c(rt)]];
-    for (let k = 0; k < across; k++) spots.push([along(rt, rt, across, k), '0%']);
-    spots.push([`calc(100% - ${c(rt)})`, c(rt)]);
-    for (let k = 0; k < down; k++) spots.push(['100%', along(rt, rb, down, k)]);
-    spots.push([`calc(100% - ${c(rb)})`, `calc(100% - ${c(rb)})`]);
-    for (let k = across - 1; k >= 0; k--) spots.push([along(rb, rb, across, k), '100%']);
-    spots.push([c(rb), `calc(100% - ${c(rb)})`]);
-    for (let k = down - 1; k >= 0; k--) spots.push(['0%', along(rt, rb, down, k)]);
-    spots.forEach(([left, top], i) => {
-      const bulb = h('span', `pk-bulb pk-bulb-${i % 3}${i % 2 ? ' pk-bulb-odd' : ''}`);
-      bulb.style.left = left;
-      bulb.style.top = top;
-      layer.append(bulb);
-    });
-    return layer;
-  }
-
   setStyle(style) {
     this.style = typeof style === 'string' || !style ? getStyle(style) : style;
     if (this.segments.length) this.setSegments(this.segments);
@@ -133,6 +135,7 @@ export class PlinkoBoard {
         img.alt = '';
         img.addEventListener('error', () => img.replaceWith(glyph));
         icon.append(img);
+        pictureBox(icon, seg);
       } else {
         icon.textContent = glyph;
       }

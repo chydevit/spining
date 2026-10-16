@@ -2,7 +2,7 @@
 // Same interface as Wheel / SlotMachine / CapsuleMachine: setSegments, setStyle, spinTo, highlight, setClosed.
 // The server has already chosen the outcome: the claw always picks up a prize of that outcome,
 // carries it to the chute and the result pops up in the window.
-import { labelColorFor, monogram } from './wheel.js';
+import { labelColorFor, monogram, pictureBox } from './wheel.js';
 import { getStyle, resolveColors } from './styles.js';
 
 const MIN_PILE = 9; // prizes shown in the window
@@ -140,6 +140,7 @@ export class ClawMachine {
           img.alt = '';
           img.addEventListener('error', () => img.replaceWith(monogram(seg.label)));
           t.append(img);
+          pictureBox(t, seg); // a picture replaces the gift box: on its background disc, or bare
         } else {
           t.textContent = monogram(seg.label);
         }
@@ -192,6 +193,7 @@ export class ClawMachine {
       img.src = seg.image;
       img.alt = '';
       pic.append(img);
+      pictureBox(pic, seg);
     } else {
       pic.textContent = monogram(seg.label);
       pic.style.color = labelColorFor(color).color;
@@ -255,10 +257,10 @@ export class ClawMachine {
       this.grip.classList.add('is-closed');
       await wait(300);
       const held = target.cloneNode(true);
-      held.className = 'claw-prize claw-held';
+      held.classList.remove('is-taken');
+      held.classList.add('claw-held');
       held.removeAttribute('style');
-      held.style.setProperty('--c', target.style.getPropertyValue('--c'));
-      held.style.setProperty('--ink', target.style.getPropertyValue('--ink'));
+      for (const v of ['--c', '--ink', '--pic-bg']) held.style.setProperty(v, target.style.getPropertyValue(v));
       this.grip.append(held);
       target.classList.add('is-taken');
       this.crane.style.setProperty('--reach', `${restReach}px`);

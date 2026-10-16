@@ -30,6 +30,8 @@ const MIME = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.webmanifest': 'application/manifest+json',
+  '.woff2': 'font/woff2',
+  '.txt': 'text/plain; charset=utf-8',
 };
 
 const SECURITY_HEADERS = {
@@ -190,19 +192,28 @@ export async function createApp({
     return token;
   }
 
+  /**
+   * The segments players see. Hidden ones are always left out. With "hide unavailable" on,
+   * out-of-stock and switched-off ones are too, unless that would leave nothing (the game shows
+   * as closed then anyway).
+   */
   function publicSegments() {
     const odds = computeOdds(db.config.segments);
-    return db.config.segments.map((s, i) => ({
+    const all = db.config.segments.flatMap((s, i) => (s.hidden ? [] : [{
       id: s.id,
       label: s.label,
       description: s.description,
       color: s.color,
       isPrize: s.isPrize,
       image: s.image ?? null,
+      imageBg: s.imageBg ?? null,
       available: isSegmentAvailable(s),
       soldOut: s.quantity === 0,
       ...(db.config.showOdds ? { odds: odds[i] } : {}),
-    }));
+    }]));
+    if (!db.config.hideUnavailable) return all;
+    const shown = all.filter((s) => s.available);
+    return shown.length ? shown : all;
   }
 
   const collectsDetails = () => db.config.collectDetails !== false;
@@ -378,9 +389,13 @@ export async function createApp({
         throw new HttpError(429, msg, { spinsLeft: 0, phoneUsed: collectsDetails(), headers });
       }
 
-      const index = drawSegment(db.config.segments);
-      if (index < 0) throw new HttpError(409, db.config.availability.closedMessage, { headers });
-      const seg = db.config.segments[index];
+      const drawn = drawSegment(db.config.segments);
+      if (drawn < 0) throw new HttpError(409, db.config.availability.closedMessage, { headers });
+      const seg = db.config.segments[drawn];
+      // The wheel as players saw it for this spin, and where the result is on it. Taken before the
+      // stock changes: with sold-out gifts hidden, this gift's slice may disappear after the spin.
+      const wheel = publicSegments();
+      const index = wheel.findIndex((s) => s.id === seg.id);
       if (seg.quantity !== null) seg.quantity -= 1; // reserved now; rolled back if saving fails
 
       const now = new Date();
@@ -410,13 +425,14 @@ export async function createApp({
 
       return send(res, 200, {
         index,
-        segment: { id: seg.id, label: seg.label, description: seg.description, color: seg.color, isPrize: seg.isPrize, image: seg.image ?? null },
+        segment: { id: seg.id, label: seg.label, description: seg.description, color: seg.color, isPrize: seg.isPrize, image: seg.image ?? null, imageBg: seg.imageBg ?? null },
         code: spin.code,
         at: spin.at,
         spinsLeft: spinsLeft(who),
         version: configVersion(),
         wheelStyle: db.config.wheelStyle ?? 'classic',
-        segments: publicSegments(),
+        wheel, // spin on these…
+        segments: publicSegments(), // …then show these (stock after this spin)
       }, headers);
     }
 
@@ -622,7 +638,8 @@ export async function createApp({
   // Remove uploaded images no segment uses any more (after a grace period, so
   // images uploaded into another admin's unsaved draft are not lost).
   function pruneUploads() {
-    const used = new Set(db.config.segments.map((s) => s.image).filter(Boolean).map((u) => u.slice('/uploads/'.length)));
+    const images = [...db.config.segments.map((s) => s.image), db.config.branding.logo, db.config.branding.icon];
+    const used = new Set(images.filter(Boolean).map((u) => u.slice('/uploads/'.length)));
     store.pruneUploads(used, Date.now() - 24 * 60 * 60 * 1000)
       .catch((err) => log('[storage] could not prune uploads:', err.message));
   }
@@ -655,7 +672,7 @@ export async function createApp({
       const ext = path.extname(file);
       // Pages, styles and scripts are revalidated on every load (cheap 304s), so an update
       // shows up immediately instead of mixing new HTML with a cached old stylesheet.
-      const revalidate = ext === '.html' || ext === '.css' || ext === '.js';
+      const revalidate = ext === '.html' || ext === '.css' || ext === '.js' || ext === '.svg';
       const etag = `W/"${stat.size.toString(36)}-${Math.floor(stat.mtimeMs).toString(36)}"`;
       const headers = {
         ...SECURITY_HEADERS,

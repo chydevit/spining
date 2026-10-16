@@ -23,6 +23,13 @@ const HEX = /^#[0-9a-f]{6}$/i;
 const ID = /^[a-z0-9-]{1,40}$/i;
 const IMAGE_URL = /^\/uploads\/[a-f0-9]{24}\.(png|jpg|webp)$/;
 
+function brandImage(value, what, errors) {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'string' && IMAGE_URL.test(value)) return value;
+  errors.push(`The ${what} image is not valid. Upload it again.`);
+  return null;
+}
+
 function str(value, { field, max, min = 0, errors }) {
   const s = typeof value === 'string' ? value.trim() : '';
   if (s.length < min) errors.push(min === 1 ? `${field} is required.` : `${field} must be at least ${min} characters.`);
@@ -59,6 +66,9 @@ export function validateConfig(input) {
     instructions: instructions.slice(0, LIMITS.instructionsMax),
     spinButtonLabel: str(b.spinButtonLabel, { field: 'Spin button label', max: LIMITS.buttonMax, min: 1, errors }),
     disclaimer: str(b.disclaimer, { field: 'Disclaimer', max: LIMITS.disclaimerMax, errors }),
+    // Uploaded logo (wide, top bar) and icon (square mark); null = the PharmKulen originals.
+    logo: brandImage(b.logo, 'logo', errors),
+    icon: brandImage(b.icon, 'icon', errors),
   };
 
   const a = input.availability ?? {};
@@ -116,11 +126,13 @@ export function validateConfig(input) {
       quantity,
       isPrize: s.isPrize === true,
       image: typeof s.image === 'string' && IMAGE_URL.test(s.image) ? s.image : null,
+      imageBg: HEX.test(s.imageBg ?? '') ? s.imageBg.toUpperCase() : null, // colour behind the picture; null = none
+      hidden: s.hidden === true, // kept with its settings and stock, but left off the wheel
     };
   });
 
-  if (segments.length && !segments.some((s) => s.weight > 0)) {
-    errors.push('At least one segment needs a weight above 0 so the wheel can land somewhere.');
+  if (segments.length && !segments.some((s) => s.weight > 0 && !s.hidden)) {
+    errors.push('At least one segment that isn’t hidden needs a weight above 0 so the wheel can land somewhere.');
   }
 
   return {
@@ -128,6 +140,7 @@ export function validateConfig(input) {
       branding,
       availability,
       showOdds: input.showOdds === true,
+      hideUnavailable: input.hideUnavailable === true, // leave out-of-stock / switched-off gifts off the wheel
       collectDetails: input.collectDetails !== false,
       wheelStyle: STYLE_IDS.includes(input.wheelStyle) ? input.wheelStyle : DEFAULT_STYLE,
       segments,
@@ -137,7 +150,7 @@ export function validateConfig(input) {
 }
 
 export function isSegmentAvailable(segment) {
-  return segment.weight > 0 && (segment.quantity === null || segment.quantity > 0);
+  return !segment.hidden && segment.weight > 0 && (segment.quantity === null || segment.quantity > 0);
 }
 
 /** Probability (0..1) of landing on each segment, in segment order. */

@@ -1,8 +1,9 @@
 // Capsule (gacha) machine renderer — style kind "capsule".
 // Same interface as Wheel / SlotMachine: setSegments, setStyle, spinTo, highlight, setClosed.
 // Turning the knob drops one capsule in the server-chosen colour, which opens to show the result.
-import { labelColorFor, monogram } from './wheel.js';
+import { labelColorFor, monogram, pictureBox } from './wheel.js';
 import { getStyle, resolveColors } from './styles.js';
+import { brandIcon } from './brand.js';
 
 const PILE = 32; // capsules shown in the dome
 
@@ -42,7 +43,8 @@ export class CapsuleMachine {
     // Sign with gift pictures (like the character banner on real machines)
     this.sign = h('div', 'cap-sign');
     const logo = h('img', 'cap-sign-logo');
-    logo.src = '/assets/pharmkulen-icon.png';
+    logo.src = brandIcon();
+    logo.dataset.brand = 'icon';
     logo.alt = '';
     this.sign.append(logo, h('span', 'cap-sign-big', 'Lucky Capsule'));
 
@@ -132,6 +134,7 @@ export class CapsuleMachine {
       img.src = seg.image;
       img.alt = '';
       pic.append(img);
+      pictureBox(pic, seg);
     } else {
       pic.textContent = monogram(seg.label);
       pic.style.color = labelColorFor(color).color;

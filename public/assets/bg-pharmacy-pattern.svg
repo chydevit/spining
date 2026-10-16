@@ -76,8 +76,9 @@
     <path d="M5 26h10" stroke-width="1.4" />
   </g>
 
+  <!-- (the PharmKulen logo is placed at 106,100 and 226,206 by the page: .stage-logos) -->
+
   <!-- small cross marks -->
-  <path d="M110 92v10M105 97h10" stroke-width="1.6" />
   <path d="M232 112v8M228 116h8" stroke-width="1.6" />
   <path d="M316 92v8M312 96h8" stroke-width="1.6" />
   <path d="M60 236v8M56 240h8" stroke-width="1.6" />

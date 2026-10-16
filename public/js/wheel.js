@@ -2,6 +2,7 @@
 // Its look (colours, rim, lights, pointer, hub, lettering) comes from a style preset in styles.js.
 const SVG_NS = 'http://www.w3.org/2000/svg';
 import { getStyle, resolveColors } from './styles.js';
+import { brandIcon } from './brand.js';
 
 // Geometry in SVG units. The rim (if the style has one) eats into the segment radius.
 const R_OUTER = 198;
@@ -31,6 +32,19 @@ function contrast(a, b) {
 }
 
 /** Choose readable label colour for a segment fill. */
+/**
+ * Style the box (or <img>) that shows a gift picture: on a round disc in the gift's
+ * picture background colour, or bare (as uploaded) when it has none. See .pic-bg / .pic-bare.
+ */
+export function pictureBox(el, seg) {
+  const bg = seg?.imageBg || null;
+  el.classList.toggle('pic-bg', !!bg);
+  el.classList.toggle('pic-bare', !bg);
+  if (bg) el.style.setProperty('--pic-bg', bg);
+  else el.style.removeProperty('--pic-bg');
+  return el;
+}
+
 /** First letter of an outcome's name, shown when a gift has no picture ("Tote Bag" → "T"). */
 export function monogram(label) {
   const ch = String(label ?? '').trim().match(/\p{L}|\p{N}/u);
@@ -88,7 +102,7 @@ export class Wheel {
    * @param {HTMLElement} stage  container element (gets .wheel-stage)
    * @param {object} opts { iconSrc, onTick, label, style }
    */
-  constructor(stage, { iconSrc = '/assets/pharmkulen-icon.png', onTick, label = 'Prize wheel', style } = {}) {
+  constructor(stage, { iconSrc, onTick, label = 'Prize wheel', style } = {}) {
     this.stage = stage;
     this.onTick = onTick;
     this.label = label;
@@ -178,7 +192,7 @@ export class Wheel {
     const hub = el('g', { class: 'wheel-hub' }, this.front);
     el('circle', { r: R_HUB, fill: st.hubFill, filter: `url(#${this.id}-hub)`, ...(st.hubRing ? { stroke: st.hubRing, 'stroke-width': '3' } : {}) }, hub);
     el('circle', { r: 30, fill: '#FFFFFF' }, hub);
-    el('image', { href: this.iconSrc, x: -31, y: -31, width: 62, height: 62, preserveAspectRatio: 'xMidYMid meet', 'clip-path': `url(#${this.id}-hubclip)` }, hub);
+    el('image', { href: this.iconSrc ?? brandIcon(), ...(this.iconSrc ? {} : { 'data-brand': 'icon' }), x: -31, y: -31, width: 62, height: 62, preserveAspectRatio: 'xMidYMid meet', 'clip-path': `url(#${this.id}-hubclip)` }, hub);
 
     // Pointer
     this.pointer = el('g', { class: 'wheel-pointer' }, this.front);
@@ -226,13 +240,15 @@ export class Wheel {
         let size = Math.min(54, 2 * 150 * Math.sin(Math.min(halfRad, Math.PI / 2)) * 0.62);
         size = Math.max(size, 22);
         const cy = -(rSeg - 12 - size / 2);
-        const clipId = `${this.id}-clip-${i}`;
-        const clip = el('clipPath', { id: clipId }, labelGroup);
-        el('circle', { cx: 0, cy, r: size / 2 }, clip);
-        el('circle', { cx: 0, cy, r: size / 2 + 2.5, fill: '#ffffff' }, labelGroup);
+        // The picture shows whole: straight on the segment, or on a disc in its background colour.
+        let pic = size;
+        if (seg.imageBg) {
+          el('circle', { cx: 0, cy, r: size / 2 + 2.5, fill: seg.imageBg }, labelGroup);
+          pic = size * 0.78;
+        }
         el('image', {
-          href: seg.image, x: -size / 2, y: cy - size / 2, width: size, height: size,
-          preserveAspectRatio: 'xMidYMid slice', 'clip-path': `url(#${clipId})`,
+          href: seg.image, x: -pic / 2, y: cy - pic / 2, width: pic, height: pic,
+          preserveAspectRatio: 'xMidYMid meet',
           opacity: seg.available === false ? '0.45' : '1',
         }, labelGroup);
         labelEnd = rSeg - 12 - size - 8;

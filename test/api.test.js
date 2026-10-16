@@ -377,3 +377,38 @@ test('the claw machine style can be chosen and is sent to players', async () => 
   assert.equal(saved.data.config.wheelStyle, 'claw');
   assert.equal((await call('/api/game')).data.wheelStyle, 'claw');
 });
+
+test('each gift picture can have a background colour, or none', async () => {
+  const cookie = await login();
+  const { data: cfgRes } = await call('/api/admin/config', { cookie });
+  const config = cfgRes.config;
+  assert.equal(config.segments[0].imageBg, null); // none by default
+  config.segments[0].imageBg = '#fff7e0';
+  config.segments[1].imageBg = 'not-a-colour';
+  const saved = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
+  assert.equal(saved.res.status, 200);
+  assert.equal(saved.data.config.segments[0].imageBg, '#FFF7E0');
+  assert.equal(saved.data.config.segments[1].imageBg, null);
+  const game = await call('/api/game');
+  assert.equal(game.data.segments.find((s) => s.id === config.segments[0].id).imageBg, '#FFF7E0');
+});
+
+test('a custom logo and icon can be set, are sent to players and can be reset', async () => {
+  const cookie = await login();
+  const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082', 'hex');
+  const up = await fetch(`${base}/api/admin/uploads`, { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'image/png' }, body: png });
+  const { url } = await up.json();
+  const { data: cfgRes } = await call('/api/admin/config', { cookie });
+  assert.equal(cfgRes.config.branding.logo, null);
+  const config = cfgRes.config;
+  config.branding = { ...config.branding, logo: url, icon: url };
+  const saved = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
+  assert.equal(saved.res.status, 200);
+  assert.equal((await call('/api/game')).data.branding.icon, url);
+
+  const bad = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: saved.data.version, config: { ...config, branding: { ...config.branding, logo: 'https://evil.example/x.png' } } } });
+  assert.equal(bad.res.status, 422);
+
+  const reset = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: saved.data.version, config: { ...config, branding: { ...config.branding, logo: null, icon: null } } } });
+  assert.equal(reset.data.config.branding.logo, null);
+});

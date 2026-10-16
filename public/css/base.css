@@ -1,3 +1,30 @@
+/* Kantumruy Pro (SIL Open Font License, see /assets/fonts/OFL.txt). Variable, weights 300–700;
+   heavier weights in the CSS use 700. Split by script so pages only load what they show. */
+@font-face {
+  font-family: 'Kantumruy Pro';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('../assets/fonts/kantumruy-pro-khmer.woff2') format('woff2');
+  unicode-range: U+1780-17FF, U+19E0-19FF, U+200C-200D, U+25CC;
+}
+@font-face {
+  font-family: 'Kantumruy Pro';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('../assets/fonts/kantumruy-pro-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Kantumruy Pro';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('../assets/fonts/kantumruy-pro-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /* PharmKulen Spin — shared design tokens & primitives.
    Palette sampled from the PharmKulen logo. */
 :root {
@@ -33,10 +60,59 @@
   --shadow: 0 4px 12px rgba(5, 59, 64, 0.08), 0 12px 32px rgba(5, 59, 64, 0.08);
   --focus: 0 0 0 3px #fff, 0 0 0 6px var(--blue);
 
-  --font: ui-rounded, 'SF Pro Rounded', 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Khmer', sans-serif;
+  --brand-icon: url('/assets/pharmkulen-icon.png'); /* replaced by an uploaded icon (brand.js) */
+  /* Kantumruy Pro: one typeface drawn for both Khmer and Latin, served from /assets/fonts (OFL). */
+  --font: 'Kantumruy Pro', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Khmer', sans-serif;
   --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   color-scheme: light;
+}
+
+/* ---------- Dark theme (opt-in via the moon button on the game and admin pages) ---------- */
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --ink: #e7f6f6;
+  --ink-2: #b4d0d2;
+  --ink-3: #8aaaad;
+  --line: #1d454b;
+  --line-2: #2a5a60;
+  --surface: #0e2f34;
+  --surface-2: #0a262a;
+  --surface-3: #134046;
+  --accent-text: #6fe6cb;
+  --danger-bg: #3d1a17;
+  --success-bg: #0f3a2b;
+  --warning-bg: #3a2b0e;
+}
+html[data-theme='dark'] .btn-secondary {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+html[data-theme='dark'] .btn-ghost {
+  color: var(--accent-text);
+}
+html[data-theme='dark'] .btn-primary:hover:not(:disabled) {
+  background: var(--teal);
+}
+html[data-theme='dark'] .input,
+html[data-theme='dark'] .textarea,
+html[data-theme='dark'] .select {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+html[data-theme='dark'] .field-error {
+  color: #fda29b;
+}
+html[data-theme='dark'] .pill-success { color: #6ce9a6; }
+html[data-theme='dark'] .pill-warning { color: #fec84b; }
+html[data-theme='dark'] .pill-danger { color: #fda29b; }
+/* Moon / sun icons in a theme button: show the one for the theme you'd switch to. */
+.icon-sun,
+html[data-theme='dark'] .icon-moon {
+  display: none;
+}
+html[data-theme='dark'] .icon-sun {
+  display: block;
 }
 
 *,
@@ -234,9 +310,16 @@ textarea {
 .input:focus,
 .textarea:focus,
 .select:focus {
+  /* a quiet 2px teal border instead of a glowing ring */
   outline: none;
   border-color: var(--teal);
-  box-shadow: 0 0 0 3px rgba(25, 178, 255, 0.35);
+  box-shadow: inset 0 0 0 1px var(--teal);
+}
+html[data-theme='dark'] .input:focus,
+html[data-theme='dark'] .textarea:focus,
+html[data-theme='dark'] .select:focus {
+  border-color: var(--turquoise);
+  box-shadow: inset 0 0 0 1px var(--turquoise);
 }
 .input[aria-invalid='true'],
 .textarea[aria-invalid='true'] {
@@ -496,7 +579,7 @@ textarea {
   position: relative;
   display: grid;
   justify-items: center;
-  gap: 2.4cqw;
+  gap: 3.2cqw;
   width: 100%;
   padding: 1cqw 3cqw 0;
   user-select: none;
@@ -505,15 +588,19 @@ textarea {
 
 /* Sign: logo + name on a plain enamel plate */
 .slot-sign {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 2.4cqw;
   width: 64%;
-  padding: 1.8cqw 4cqw;
+  padding: 2cqw 4cqw;
   border-radius: 3cqw;
-  background: var(--night);
-  box-shadow: 0 1cqw 0 #061629;
+  background:
+    radial-gradient(70% 120% at 50% 0%, rgba(98, 219, 255, 0.28), transparent 70%),
+    linear-gradient(180deg, #123a66, var(--night));
+  border: 0.8cqw solid #f7d27a;
+  box-shadow: 0 1cqw 0 #061629, 0 0 4cqw rgba(247, 210, 122, 0.25);
 }
 .slot-sign-logo {
   width: 7cqw;
@@ -524,10 +611,11 @@ textarea {
 }
 .slot-sign-text {
   font-size: 6.4cqw;
-  font-weight: 800;
+  font-weight: 900;
   line-height: 1;
   letter-spacing: -0.01em;
   color: #ffffff;
+  text-shadow: 0 0 1.2cqw rgba(98, 219, 255, 0.9), 0 0 3cqw rgba(25, 178, 255, 0.6);
 }
 
 /* Cabinet */
@@ -537,17 +625,27 @@ textarea {
   justify-items: center;
   gap: 2.6cqw;
   width: 88%;
-  padding: 4cqw 4cqw 3.4cqw;
+  padding: 4.4cqw 4.4cqw 3.6cqw;
   border-radius: 7cqw 7cqw 3cqw 3cqw;
-  background: linear-gradient(180deg, var(--cab), var(--cab-2));
-  border: 1cqw solid #ffffff;
-  box-shadow: 0 2cqw 5cqw rgba(5, 59, 64, 0.22), inset 0 -1.2cqw 0 rgba(5, 143, 154, 0.12);
+  border: 1cqw solid transparent;
+  /* deep teal body inside a polished chrome rim */
+  background:
+    radial-gradient(80% 50% at 50% 0%, rgba(98, 219, 255, 0.22), transparent 70%) padding-box,
+    linear-gradient(180deg, #0f6f8a 0%, #0b4f6b 55%, #083b55 100%) padding-box,
+    linear-gradient(160deg, #ffffff, #a9cdd2 30%, #f4fbfc 50%, #86aeb4 75%, #e3f3f4) border-box;
+  box-shadow:
+    0 2cqw 5cqw rgba(5, 59, 64, 0.35),
+    0 0 6cqw -1cqw rgba(68, 228, 188, 0.35),
+    inset 0 1cqw 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1.2cqw 0 rgba(0, 0, 0, 0.18);
+  transition: box-shadow 0.3s ease;
 }
 /* Pull lever on the right side; it pulls down when the reels start. */
 .slot-lever {
   position: absolute;
   top: 6%;
-  right: -6.4cqw;
+  right: -7cqw;
+  z-index: 4; /* in front of the rim bulbs */
   width: 6.4cqw;
   height: 46%;
   pointer-events: none;
@@ -604,7 +702,10 @@ textarea {
   padding: 2.2cqw;
   border-radius: 4cqw;
   background: linear-gradient(180deg, #123a66, var(--night));
-  box-shadow: inset 0 0 0 0.6cqw rgba(255, 255, 255, 0.9), inset 0 1.2cqw 3cqw rgba(0, 0, 0, 0.45);
+  box-shadow:
+    inset 0 0 0 0.6cqw rgba(255, 255, 255, 0.9),
+    inset 0 1.2cqw 3cqw rgba(0, 0, 0, 0.45),
+    0 0 0 0.8cqw rgba(6, 18, 31, 0.55);
 }
 .slot-reel {
   position: relative;
@@ -696,10 +797,13 @@ textarea {
   transform: translateY(-50%);
   border-radius: 2.4cqw;
   border: 0.7cqw solid var(--neon);
+  box-shadow: 0 0 2cqw rgba(68, 228, 188, 0.7), inset 0 0 2cqw rgba(68, 228, 188, 0.45);
   pointer-events: none;
+  z-index: 2;
 }
 .slot-window.is-win .slot-payline {
   border-color: #f7d27a;
+  box-shadow: 0 0 3cqw rgba(247, 210, 122, 0.9), inset 0 0 2.4cqw rgba(247, 210, 122, 0.55);
   animation: payline 0.5s steps(2) 4;
 }
 @keyframes payline {
@@ -708,11 +812,13 @@ textarea {
 .slot-arrow {
   position: absolute;
   top: 50%;
+  z-index: 2;
   width: 0;
   height: 0;
   border-top: 2.2cqw solid transparent;
   border-bottom: 2.2cqw solid transparent;
   transform: translateY(-50%);
+  filter: drop-shadow(0 0 1cqw var(--neon));
 }
 .slot-arrow-l { left: -1.2cqw; border-left: 2.6cqw solid var(--neon); }
 .slot-arrow-r { right: -1.2cqw; border-right: 2.6cqw solid var(--neon); }
@@ -727,7 +833,11 @@ textarea {
   padding: 1.8cqw 4cqw;
   border-radius: 2.6cqw;
   background: #06121f;
-  box-shadow: inset 0 0 0 0.5cqw #1d3a55, inset 0 0.8cqw 2cqw rgba(0, 0, 0, 0.6), 0 0.8cqw 0 #c9e6e3;
+  box-shadow:
+    inset 0 0 0 0.5cqw #1d3a55,
+    inset 0 0.8cqw 2cqw rgba(0, 0, 0, 0.6),
+    0 0 0 0.6cqw rgba(255, 255, 255, 0.12),
+    0 0 3cqw rgba(111, 245, 210, 0.25);
   overflow: hidden;
 }
 .slot-display::after {
@@ -749,6 +859,7 @@ textarea {
   line-height: 1.2;
   letter-spacing: 0.12em;
   color: #6ff5d2;
+  text-shadow: 0 0 1cqw currentColor, 0 0 2.4cqw rgba(111, 245, 210, 0.6);
 }
 .is-spinning .slot-display-text {
   animation: led-blink 0.5s steps(2) infinite;
@@ -768,8 +879,8 @@ textarea {
   margin-top: -1cqw;
   padding: 3.2cqw 4cqw 3.6cqw;
   border-radius: 3cqw 3cqw 5cqw 5cqw;
-  background: #06636b;
-  box-shadow: 0 1.2cqw 2.4cqw rgba(5, 59, 64, 0.2);
+  background: linear-gradient(180deg, #0a7a84, #06636b 40%, #054e55);
+  box-shadow: 0 1.2cqw 2.4cqw rgba(5, 59, 64, 0.25), inset 0 0.6cqw 0 rgba(255, 255, 255, 0.15);
   text-align: center;
 }
 .slot-base::before {
@@ -777,17 +888,22 @@ textarea {
   position: absolute;
   inset: 1.8cqw;
   border-radius: 2.4cqw;
-  background: linear-gradient(180deg, #0b4f6b, #083b55);
-  box-shadow: inset 0 0 1.6cqw rgba(0, 0, 0, 0.35);
+  background:
+    radial-gradient(60% 80% at 50% 0%, rgba(247, 210, 122, 0.16), transparent 70%),
+    linear-gradient(180deg, #0b4f6b, #083b55);
+  box-shadow: inset 0 0 1.6cqw rgba(0, 0, 0, 0.35), inset 0 0 0 0.3cqw rgba(247, 210, 122, 0.35);
 }
 .slot-base > * {
   position: relative;
 }
 .slot-base-title {
-  margin-bottom: 1.6cqw;
+  margin-bottom: 1.8cqw;
   font-size: 3cqw;
   font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: #f7d27a;
+  text-shadow: 0 0 1.4cqw rgba(247, 210, 122, 0.7);
 }
 .slot-gifts {
   display: flex;
@@ -801,8 +917,8 @@ textarea {
   width: 17cqw;
   padding: 1.6cqw 1cqw 1.4cqw;
   border-radius: 2.4cqw;
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 0 0 0.3cqw rgba(255, 255, 255, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05));
+  box-shadow: inset 0 0 0 0.3cqw rgba(255, 255, 255, 0.18), 0 0.8cqw 1.6cqw rgba(0, 0, 0, 0.2);
 }
 .slot-gift-pic {
   display: grid;
@@ -814,7 +930,7 @@ textarea {
   background: var(--tile);
   font-size: 4.4cqw;
   font-weight: 900;
-  box-shadow: 0 0 0 0.5cqw #ffffff;
+  box-shadow: 0 0 0 0.5cqw #ffffff, 0 0 2.4cqw 0.4cqw color-mix(in srgb, var(--tile) 70%, transparent);
 }
 .slot-gift-pic img {
   width: 100%;
@@ -828,6 +944,27 @@ textarea {
   line-height: 1.15;
   color: #ffffff;
   overflow-wrap: anywhere;
+}
+/* Curved glass over the reels */
+.slot-window::after {
+  content: '';
+  position: absolute;
+  inset: 0.6cqw;
+  z-index: 1;
+  border-radius: 3.4cqw;
+  pointer-events: none;
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.06) 22%, transparent 40%);
+}
+/* Motion blur while a reel is spinning */
+.slot-reel.is-rolling .slot-strip {
+  filter: blur(0.35cqw) saturate(1.2);
+}
+.slot.is-won .slot-cabinet {
+  box-shadow:
+    0 2cqw 5cqw rgba(5, 59, 64, 0.35),
+    0 0 8cqw 0 rgba(247, 210, 122, 0.55),
+    inset 0 1cqw 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1.2cqw 0 rgba(0, 0, 0, 0.18);
 }
 .slot-stage.is-closed .slot {
   filter: grayscale(0.85) opacity(0.6);
@@ -936,7 +1073,7 @@ textarea {
   aspect-ratio: 1;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  background: #ffffff url('../assets/pharmkulen-icon.png') center / 78% no-repeat;
+  background: #ffffff var(--brand-icon) center / 78% no-repeat;
   box-shadow: 0 0 0 0.25cqw rgba(255, 255, 255, 0.9), 0 0.3cqw 0.6cqw rgba(3, 40, 44, 0.3);
 }
 .cap-drop-bottom::before {
@@ -1405,7 +1542,7 @@ textarea {
   transform: translate(-50%, -50%);
   border-radius: 50%;
   /* a white pin stamped with the PharmKulen mark */
-  background: #ffffff url('../assets/pharmkulen-icon.png') center / 80% no-repeat;
+  background: #ffffff var(--brand-icon) center / 80% no-repeat;
   box-shadow: 0 0.5cqw 0.7cqw rgba(0, 0, 0, 0.35);
 }
 .pk-peg.hit {
@@ -1588,7 +1725,7 @@ textarea {
   transform: translate(-50%, -50%);
   border-radius: 50%;
   /* white ball face with the PharmKulen logo inside a brand-blue ring, so it stands out from the pins */
-  background: #ffffff url('../assets/pharmkulen-icon.png') center / 64% no-repeat;
+  background: #ffffff var(--brand-icon) center / 64% no-repeat;
   box-shadow:
     inset 0 0 0 1.1cqw #19b2ff,
     inset 0 0 0 1.4cqw #0b6fa8,
@@ -2083,4 +2220,63 @@ textarea {
 }
 .claw-stage.is-closed .claw {
   filter: grayscale(0.85) opacity(0.6);
+}
+
+/* =========================================================================
+   Gift pictures. Each gift can have a picture background colour (Admin → Wheel & gifts):
+   .pic-bg  = the whole picture on a round disc in that colour (--pic-bg)
+   .pic-bare = no backing at all: the picture shows exactly as uploaded, so a
+               transparent PNG sits straight on the game.
+   Set by pictureBox() on the picture's box, or on the <img> itself.
+   ========================================================================= */
+.pic-bare {
+  border-radius: 0 !important;
+  overflow: visible !important;
+  background: none !important;
+  box-shadow: none !important;
+}
+.pic-bare img,
+img.pic-bare {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+  object-fit: contain !important;
+}
+.pic-bg {
+  border-radius: 50% !important;
+  overflow: hidden;
+  background: var(--pic-bg) !important;
+}
+.pic-bg img,
+img.pic-bg {
+  box-sizing: border-box;
+  padding: 12%;
+  border: 0 !important;
+  background: none !important;
+  object-fit: contain !important;
+}
+img.pic-bg {
+  background: var(--pic-bg) !important;
+}
+/* Slot tiles: a bare picture can be a little larger. */
+.slot-img.pic-bare {
+  width: 9cqw;
+  height: 9cqw;
+}
+/* Claw machine: a picture replaces the gift box. */
+.claw-prize.pic-bare,
+.claw-prize.pic-bg {
+  padding-top: 0;
+}
+.claw-prize.pic-bare img {
+  width: 100%;
+  filter: drop-shadow(0 0.8cqw 0.8cqw rgba(0, 0, 0, 0.35));
+}
+.claw-prize.pic-bg {
+  box-shadow: 0 1cqw 1.6cqw rgba(0, 0, 0, 0.35);
+}
+.claw-prize.pic-bg img {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
 }

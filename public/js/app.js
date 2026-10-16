@@ -1,6 +1,7 @@
 // PharmKulen Spin — player game.
-import { labelColorFor, monogram } from './wheel.js';
+import { labelColorFor, monogram, pictureBox } from './wheel.js';
 import { Spinner } from './spinner.js';
+import { setBrand, brandMark } from './brand.js';
 import { getStyle } from './styles.js';
 import { Sound, confetti } from './fx.js';
 
@@ -111,7 +112,30 @@ async function api(path, options = {}) {
 }
 
 // ---------- rendering ----------
+/** Faint brand marks across the game background, on the same 360px grid as the pattern (see .stage-logos). */
+function buildStageLogos() {
+  const box = document.createElement('div');
+  box.className = 'stage-logos';
+  box.setAttribute('aria-hidden', 'true');
+  for (let i = 0; i < 36; i++) {
+    const cell = document.createElement('div');
+    for (const k of ['a', 'b']) {
+      const img = document.createElement('img');
+      img.className = `stage-logo stage-logo-${k}`;
+      img.alt = '';
+      img.decoding = 'async';
+      img.dataset.brand = 'mark';
+      img.src = brandMark();
+      cell.append(img);
+    }
+    box.append(cell);
+  }
+  $('play').prepend(box);
+}
+buildStageLogos();
+
 function renderBranding(b) {
+  setBrand(b);
   $('game-title').textContent = b.title;
   document.title = `${b.title} · PharmKulen`;
   $('tagline').textContent = b.tagline;
@@ -191,6 +215,7 @@ function resultIcon(entry, className) {
     img.addEventListener('error', () => { img.remove(); box.textContent = monogram(entry.label); });
     box.classList.add('has-image');
     box.append(img);
+    pictureBox(box, entry);
   } else {
     box.textContent = monogram(entry.label);
   }
@@ -207,12 +232,14 @@ function renderLatest(entry) {
   const box = $('latest');
   if (!entry) return;
   const card = document.createElement('div');
-  card.className = 'latest-card';
+  card.className = `latest-card ${entry.isPrize ? 'is-prize' : 'is-neutral'}`;
+  card.style.setProperty('--c', entry.color);
   const dot = resultIcon(entry, 'latest-dot');
   const body = document.createElement('div');
+  body.className = 'latest-body';
   const kicker = document.createElement('p');
   kicker.className = 'latest-kicker';
-  kicker.textContent = 'Latest result';
+  kicker.textContent = entry.isPrize ? 'Latest win' : 'Latest result';
   body.append(kicker);
   const label = document.createElement('p');
   label.className = 'latest-label';
@@ -221,13 +248,18 @@ function renderLatest(entry) {
   desc.className = 'latest-desc';
   desc.textContent = entry.description || (entry.isPrize ? 'Show your claim code to a team member.' : 'Thanks for playing!');
   body.append(label, desc);
-  if (entry.code) {
-    const code = document.createElement('p');
-    code.className = 'latest-code';
-    code.textContent = `Claim code: ${entry.code}`;
-    body.append(code);
-  }
   card.append(dot, body);
+  if (entry.code) {
+    const ticket = document.createElement('p');
+    ticket.className = 'latest-code';
+    const cap = document.createElement('span');
+    cap.className = 'latest-code-cap';
+    cap.textContent = 'Claim code';
+    const code = document.createElement('strong');
+    code.textContent = entry.code;
+    ticket.append(cap, code);
+    card.append(ticket);
+  }
   box.replaceChildren(card);
 }
 
@@ -235,8 +267,11 @@ function renderHistory() {
   const list = $('history');
   list.replaceChildren(...state.history.map((h) => {
     const li = document.createElement('li');
+    li.className = h.isPrize ? 'is-prize' : 'is-neutral';
+    li.style.setProperty('--c', h.color);
     const dot = resultIcon(h, 'dot');
     const text = document.createElement('span');
+    text.className = 'h-text';
     const label = document.createElement('span');
     label.className = 'h-label';
     label.textContent = h.label;
@@ -269,6 +304,11 @@ function applyStyle(id) {
   else $('play').style.removeProperty('--wheel-glow');
 }
 
+/** Same slices in the same order, each equally available? (Hidden sold-out gifts change the list.) */
+function sameSegments(a, b) {
+  return a.length === b.length && a.every((s, i) => s.id === b[i].id && s.available === b[i].available);
+}
+
 function applyGame(game) {
   const prevVersion = state.game?.version;
   state.game = game;
@@ -280,8 +320,7 @@ function applyGame(game) {
     wheel.setSegments(game.segments);
   } else {
     // Availability (stock) can change without a config version bump.
-    const changed = game.segments.some((s, i) => wheel.segments[i]?.available !== s.available);
-    if (changed) wheel.setSegments(game.segments);
+    if (!sameSegments(wheel.segments, game.segments)) wheel.setSegments(game.segments);
   }
   updateControls();
 }
@@ -339,10 +378,12 @@ async function spin() {
   // If staff changed the wheel since this page loaded, redraw it first.
   if (result.version !== state.game.version) {
     state.game.version = result.version;
-    state.game.segments = result.segments;
     state.game.wheelStyle = result.wheelStyle;
     applyStyle(result.wheelStyle);
-    wheel.setSegments(result.segments);
+    wheel.setSegments(result.wheel);
+  } else if (!sameSegments(wheel.segments, result.wheel)) {
+    // Stock changed since the page loaded (e.g. a gift ran out and is now hidden): spin on the current wheel.
+    wheel.setSegments(result.wheel);
   }
 
   await wheel.spinTo(result.index, { reducedMotion: reducedMotion.matches });
@@ -358,6 +399,7 @@ async function spin() {
     color: wheel.colors[result.index] ?? result.segment.color, // the colour as drawn in the current style
     isPrize: result.segment.isPrize,
     image: result.segment.image,
+    imageBg: result.segment.imageBg ?? null,
     code: result.code,
   };
   state.history.unshift(entry);
@@ -437,6 +479,8 @@ $('spin-again').addEventListener('click', () => {
 
 $('close-result').addEventListener('click', () => $('result-dialog').close());
 $('result-dialog').addEventListener('close', () => {
+  // A gift that just ran out may now be hidden: update the wheel once the result is out of the way.
+  if (!state.spinning && !sameSegments(wheel.segments, state.game.segments)) wheel.setSegments(state.game.segments);
   // On a shared tablet, the next customer must enter their own details.
   if (!state.spinAgainPending && state.player) setPlayer(null);
   state.spinAgainPending = false;

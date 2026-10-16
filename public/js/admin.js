@@ -1,5 +1,6 @@
 // PharmKulen Spin — admin console.
 import { Spinner } from './spinner.js';
+import { setBrand, DEFAULT_LOGO, DEFAULT_ICON } from './brand.js';
 import { WHEEL_STYLES, getStyle, resolveColors } from './styles.js';
 
 const $ = (id) => document.getElementById(id);
@@ -112,7 +113,7 @@ function newId() {
 }
 
 // ---------- game rules mirrored for preview ----------
-const segAvailable = (s) => Number(s.weight) > 0 && (s.quantity === null || Number(s.quantity) > 0);
+const segAvailable = (s) => !s.hidden && Number(s.weight) > 0 && (s.quantity === null || Number(s.quantity) > 0);
 function odds(segments) {
   const total = segments.reduce((sum, s) => sum + (segAvailable(s) ? Number(s.weight) : 0), 0);
   return segments.map((s) => (total > 0 && segAvailable(s) ? Number(s.weight) / total : 0));
@@ -426,7 +427,7 @@ function renderSegments() {
   const o = odds(segs);
   list.replaceChildren(...segs.map((s, i) => {
     const uid = `${s.id}-${i}`;
-    const li = h('li', { class: 'segment', dataset: { index: i }, 'aria-label': `Segment ${i + 1}: ${s.label || 'untitled'}` });
+    const li = h('li', { class: `segment${s.hidden ? ' is-hidden' : ''}`, dataset: { index: i }, 'aria-label': `Segment ${i + 1}: ${s.label || 'untitled'}${s.hidden ? ' (hidden)' : ''}` });
     li.style.setProperty('--seg-color', s.color);
 
     const chips = PALETTE.map((p) =>
@@ -441,6 +442,7 @@ function renderSegments() {
     li.append(
       h('span', { class: 'segment-index', 'aria-hidden': 'true', text: String(i + 1) }),
       h('div', { class: 'segment-fields' },
+        s.hidden ? h('p', { class: 'segment-hidden-note', text: 'Hidden — not on the wheel and can’t be won. Its settings and stock are kept.' }) : null,
         h('div', { class: 'field f-label' },
           h('label', { for: `lbl-${uid}`, text: 'Label on wheel' }),
           h('input', { id: `lbl-${uid}`, class: 'input', maxlength: '24', value: s.label, dataset: { field: 'label' }, required: true }),
@@ -461,6 +463,7 @@ function renderSegments() {
               s.image ? h('button', { type: 'button', class: 'btn btn-ghost btn-sm delete', dataset: { action: 'remove-image' }, text: 'Remove', 'aria-label': `Remove image from segment ${i + 1}` }) : null,
             ),
           ),
+          s.image ? imageBgRow(s, i) : null,
         ),
         h('div', { class: 'field f-color', role: 'group', 'aria-labelledby': `col-${uid}` },
           h('span', { id: `col-${uid}`, class: 'label', text: 'Colour' }),
@@ -481,7 +484,7 @@ function renderSegments() {
         h('div', { class: 'field f-weight' },
           h('label', { for: `w-${uid}`, text: 'Weight' }),
           h('input', { id: `w-${uid}`, class: 'input', type: 'number', min: '0', max: '1000', step: 'any', inputmode: 'decimal', value: String(s.weight), dataset: { field: 'weight' }, 'aria-describedby': `ch-${uid}` }),
-          h('span', { id: `ch-${uid}`, class: 'chance', dataset: { chance: i }, text: `${fmtPct(o[i])} chance` }),
+          h('span', { id: `ch-${uid}`, class: 'chance', dataset: { chance: i }, text: s.hidden ? 'Hidden' : `${fmtPct(o[i])} chance` }),
         ),
         h('div', { class: 'field f-stock' },
           h('label', { for: `q-${uid}`, text: 'Stock left' }),
@@ -491,6 +494,7 @@ function renderSegments() {
         h('div', { class: 'seg-actions f-actions' },
           h('button', { type: 'button', class: 'btn btn-ghost', dataset: { action: 'up' }, disabled: i === 0, text: '↑ Move up', 'aria-label': `Move segment ${i + 1} up` }),
           h('button', { type: 'button', class: 'btn btn-ghost', dataset: { action: 'down' }, disabled: i === segs.length - 1, text: '↓ Move down', 'aria-label': `Move segment ${i + 1} down` }),
+          h('button', { type: 'button', class: 'btn btn-ghost', dataset: { action: 'hide' }, 'aria-pressed': String(s.hidden === true), text: s.hidden ? 'Show' : 'Hide', 'aria-label': `${s.hidden ? 'Show' : 'Hide'} segment ${i + 1} on the wheel` }),
           h('button', { type: 'button', class: 'btn btn-ghost', dataset: { action: 'duplicate' }, disabled: segs.length >= MAX_SEGMENTS, text: 'Duplicate', 'aria-label': `Duplicate segment ${i + 1}` }),
           h('button', { type: 'button', class: 'btn btn-ghost delete', dataset: { action: 'delete' }, disabled: segs.length <= MIN_SEGMENTS, text: 'Delete', 'aria-label': `Delete segment ${i + 1}` }),
         ),
@@ -502,12 +506,39 @@ function renderSegments() {
   $('segment-count').textContent = `${segs.length} of ${MAX_SEGMENTS} segments.`;
 }
 
-/** Square thumbnail: the uploaded image, or the segment colour. */
+/** Choices for the colour behind a gift picture: none (transparent), white, the gift's colour, brand colours, or any colour. */
+function imageBgRow(s, i) {
+  const choices = [
+    { name: 'None (transparent)', hex: '' },
+    { name: 'White', hex: '#FFFFFF' },
+    { name: 'Gift colour', hex: s.color.toUpperCase() },
+    ...PALETTE.map((p) => ({ name: p.name, hex: p.hex.toUpperCase() })),
+  ].filter((c, k, arr) => arr.findIndex((x) => x.hex === c.hex) === k);
+  const current = s.imageBg ?? '';
+  const chips = choices.map((c) => {
+    const chip = h('button', {
+      type: 'button', class: `color-chip bg-chip${c.hex ? '' : ' bg-none'}`, title: c.name, 'aria-label': `Picture background: ${c.name}`,
+      'aria-pressed': String(c.hex === current), dataset: { action: 'image-bg', bg: c.hex },
+    });
+    if (c.hex) chip.style.background = c.hex;
+    return chip;
+  });
+  return h('div', { class: 'image-bg', role: 'group', 'aria-label': `Picture background for segment ${i + 1}` },
+    h('span', { class: 'image-bg-label', text: 'Picture background' }),
+    h('div', { class: 'color-row' },
+      ...chips,
+      h('input', { type: 'color', class: 'color-custom', value: (s.imageBg ?? '#FFFFFF').toLowerCase(), 'aria-label': 'Custom picture background colour', dataset: { field: 'imageBg' } }),
+    ),
+  );
+}
+
+/** Square thumbnail: the uploaded image on its picture background (checkerboard = none), or the segment colour. */
 function segThumb(s, extraClass = '', large = false) {
   const box = h('span', { class: `thumb ${extraClass}${large ? ' thumb-lg' : ''}`, 'aria-hidden': 'true' });
   box.style.background = s.color;
   if (s.image) {
-    box.classList.add('has-image');
+    box.classList.add('has-image', s.imageBg ? 'has-bg' : 'is-transparent');
+    box.style.setProperty('--thumb-bg', s.imageBg ?? 'transparent');
     box.append(h('img', { src: s.image, alt: '' }));
   } else if (large) {
     box.append(h('span', { class: 'thumb-empty', text: 'No image' }));
@@ -519,12 +550,12 @@ function segThumb(s, extraClass = '', large = false) {
 const MAX_SOURCE_IMAGE = 15 * 1024 * 1024;
 
 /** Downscale to at most 320px and re-encode, which also strips photo metadata. */
-async function prepareImage(file) {
+async function prepareImage(file, maxSize = 320) {
   if (!/^image\/(png|jpeg|webp)$/.test(file.type)) throw new Error('Choose a PNG, JPEG or WebP image.');
   if (file.size > MAX_SOURCE_IMAGE) throw new Error('That image is too large. Please choose one under 15 MB.');
   let bmp;
   try { bmp = await createImageBitmap(file); } catch { throw new Error('That image could not be read. Try another file.'); }
-  const scale = Math.min(1, 320 / Math.max(bmp.width, bmp.height));
+  const scale = Math.min(1, maxSize / Math.max(bmp.width, bmp.height));
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.round(bmp.width * scale));
   canvas.height = Math.max(1, Math.round(bmp.height * scale));
@@ -585,6 +616,56 @@ $('segment-list').addEventListener('drop', (e) => {
   if (file) uploadSegmentImage(Number(drop.closest('.segment').dataset.index), file);
 });
 
+// ----- Logo and icon (Branding tab) -----
+const BRAND_IMAGES = { logo: { fallback: DEFAULT_LOGO, maxSize: 800 }, icon: { fallback: DEFAULT_ICON, maxSize: 320 } };
+
+function renderBrandImages() {
+  for (const [kind, { fallback }] of Object.entries(BRAND_IMAGES)) {
+    const custom = state.draft.branding[kind];
+    $(`br-${kind}-img`).src = custom || fallback;
+    $(`br-${kind}-btn`).textContent = custom ? 'Change' : 'Upload';
+    $(`br-${kind}-reset`).hidden = !custom;
+  }
+}
+
+async function uploadBrandImage(kind, file) {
+  const label = $(`br-${kind}-btn`).closest('label');
+  label.classList.add('is-busy');
+  try {
+    const blob = await prepareImage(file, BRAND_IMAGES[kind].maxSize);
+    const res = await fetch('/api/admin/uploads', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': blob.type }, body: blob });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      showLogin('Your session ended. Sign in again — your unsaved changes are kept.');
+      return;
+    }
+    if (!res.ok) throw new Error(data.error || 'Upload failed. Please try again.');
+    state.draft.branding[kind] = data.url;
+    toast(`New ${kind} added. Save to show it to players.`);
+    onDraftChange();
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    label.classList.remove('is-busy');
+    renderBrandImages();
+  }
+}
+
+for (const kind of Object.keys(BRAND_IMAGES)) {
+  $(`br-${kind}-file`).addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // picking the same file again still counts
+    if (file && state.draft) uploadBrandImage(kind, file);
+  });
+  $(`br-${kind}-reset`).addEventListener('click', () => {
+    if (!state.draft) return;
+    state.draft.branding[kind] = null;
+    renderBrandImages();
+    onDraftChange();
+    $(`br-${kind}-file`).focus();
+  });
+}
+
 // ----- "On the wheel" overview (beside the preview) -----
 function renderEntries() {
   const segs = state.draft.segments;
@@ -595,7 +676,7 @@ function renderEntries() {
     let right;
     if (!segAvailable(s)) {
       const soldOut = s.quantity !== null && s.quantity !== '' && Number(s.quantity) === 0;
-      right = h('span', { class: 'e-note', text: soldOut ? 'All claimed' : 'Not in play' });
+      right = h('span', { class: 'e-note', text: s.hidden ? 'Hidden' : soldOut ? 'All claimed' : 'Not in play' });
     } else {
       right = h('span', { class: 'e-pct', text: fmtPct(o[i]) });
     }
@@ -635,6 +716,14 @@ function refreshChances() {
   });
 }
 
+/** Update the thumbnail and swatch states after the picture background changes. */
+function refreshImageBg(li, seg) {
+  li.querySelector('.image-row .thumb')?.replaceWith(segThumb(seg, 'image-drop', true));
+  const current = seg.imageBg ?? '';
+  li.querySelectorAll('.bg-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.bg === current)));
+  if (seg.imageBg) li.querySelector('[data-field="imageBg"]').value = seg.imageBg.toLowerCase();
+}
+
 $('segment-list').addEventListener('input', (e) => {
   const field = e.target.dataset.field;
   const li = e.target.closest('.segment');
@@ -648,10 +737,13 @@ $('segment-list').addEventListener('input', (e) => {
   else if (field === 'weight') seg.weight = v === '' ? '' : Number(v);
   else if (field === 'quantity') seg.quantity = v === '' ? null : Number(v);
   else if (field === 'isPrize') seg.isPrize = e.target.checked;
-  else if (field === 'color') {
+  else if (field === 'imageBg') {
+    seg.imageBg = v.toUpperCase();
+    refreshImageBg(li, seg);
+  } else if (field === 'color') {
     seg.color = v.toUpperCase();
     li.style.setProperty('--seg-color', seg.color);
-    li.querySelectorAll('.color-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.color === seg.color)));
+    li.querySelectorAll('.color-chip:not(.bg-chip)').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.color === seg.color)));
   }
   if (field === 'weight' || field === 'quantity') refreshChances();
   onDraftChange();
@@ -667,6 +759,12 @@ $('segment-list').addEventListener('click', async (e) => {
   let focusIndex = i;
   let focusAction = action;
 
+  if (action === 'image-bg') {
+    segs[i].imageBg = btn.dataset.bg || null;
+    refreshImageBg(li, segs[i]);
+    onDraftChange();
+    return;
+  }
   if (action === 'remove-image') {
     segs[i].image = null;
     renderSegments();
@@ -677,7 +775,7 @@ $('segment-list').addEventListener('click', async (e) => {
   if (action === 'color') {
     segs[i].color = btn.dataset.color.toUpperCase();
     li.style.setProperty('--seg-color', segs[i].color);
-    li.querySelectorAll('.color-chip').forEach((c) => c.setAttribute('aria-pressed', String(c === btn)));
+    li.querySelectorAll('.color-chip:not(.bg-chip)').forEach((c) => c.setAttribute('aria-pressed', String(c === btn)));
     li.querySelector('.color-custom').value = segs[i].color.toLowerCase();
     onDraftChange();
     return;
@@ -690,6 +788,10 @@ $('segment-list').addEventListener('click', async (e) => {
     [segs[i + 1], segs[i]] = [segs[i], segs[i + 1]];
     focusIndex = i + 1;
     if (focusIndex === segs.length - 1) focusAction = 'up';
+  } else if (action === 'hide') {
+    segs[i].hidden = !segs[i].hidden;
+    focusIndex = i;
+    focusAction = 'hide';
   } else if (action === 'duplicate' && segs.length < MAX_SEGMENTS) {
     segs.splice(i + 1, 0, { ...clone(segs[i]), id: newId() });
     focusIndex = i + 1;
@@ -732,6 +834,7 @@ function renderConfigForms() {
   const d = state.draft;
   $('av-enabled').checked = d.availability.enabled;
   $('av-details').checked = d.collectDetails !== false;
+  $('av-hide').checked = d.hideUnavailable === true;
   $('av-start').value = toLocalInput(d.availability.startAt);
   $('av-end').value = toLocalInput(d.availability.endAt);
   $('av-limit').value = d.availability.spinsPerDevicePerDay;
@@ -742,6 +845,7 @@ function renderConfigForms() {
   $('br-tagline').value = d.branding.tagline;
   $('br-instructions').value = d.branding.instructions.join('\n');
   $('br-disclaimer').value = d.branding.disclaimer;
+  renderBrandImages();
   renderSegments();
   renderAvailabilityStatus();
   schedulePreview();
@@ -755,6 +859,7 @@ function renderAvailabilityStatus() {
 const formBindings = {
   'av-enabled': (el) => (state.draft.availability.enabled = el.checked),
   'av-details': (el) => (state.draft.collectDetails = el.checked),
+  'av-hide': (el) => (state.draft.hideUnavailable = el.checked),
   'av-start': (el) => (state.draft.availability.startAt = fromLocalInput(el.value)),
   'av-end': (el) => (state.draft.availability.endAt = fromLocalInput(el.value)),
   'av-period': (el) => (state.draft.availability.limitPeriod = el.value),
@@ -791,6 +896,23 @@ function schedulePreview() {
   cancelAnimationFrame(previewFrame);
   previewFrame = requestAnimationFrame(renderPreview);
 }
+/** The slices players see: all but hidden ones, and only available ones when "hide unavailable" is on (same rule as the server). */
+function shownSegments(d) {
+  const all = d.segments.map((s, i) => ({
+    ...s,
+    label: s.label || '—',
+    color: /^#[0-9a-f]{6}$/i.test(s.color) ? s.color : '#058F9A',
+    available: segAvailable(s),
+    soldOut: s.quantity !== null && s.quantity !== '' && Number(s.quantity) === 0,
+    draftIndex: i,
+  }));
+  const visible = all.filter((s) => !s.hidden);
+  if (!visible.length) return all; // can't be saved like this; keep the preview drawable meanwhile
+  if (!d.hideUnavailable) return visible;
+  const shown = visible.filter((s) => s.available);
+  return shown.length ? shown : visible;
+}
+
 function renderPreview() {
   const d = state.draft;
   if (!d || $('preview').hidden) return;
@@ -798,11 +920,12 @@ function renderPreview() {
   renderStyleNote();
   if (state.tab === 'style') renderStyleGallery();
   if (pvWheel.spinning) return;
+  setBrand(d.branding); // logo + icon in the preview and style cards
   if (pvWheel.style.id !== getStyle(d.wheelStyle).id) pvWheel.setStyle(d.wheelStyle);
   $('pv-title').textContent = d.branding.title || 'Untitled';
   $('pv-tagline').textContent = d.branding.tagline;
   $('pv-button').textContent = d.branding.spinButtonLabel || 'Spin';
-  pvWheel.setSegments(d.segments.map((s) => ({ ...s, label: s.label || '—', color: /^#[0-9a-f]{6}$/i.test(s.color) ? s.color : '#058F9A', available: segAvailable(s), soldOut: s.quantity !== null && s.quantity !== '' && Number(s.quantity) === 0 })));
+  pvWheel.setSegments(shownSegments(d));
   const status = draftStatus(d);
   pvWheel.setClosed(!status.open);
   $('pv-closed').hidden = status.open;
@@ -891,7 +1014,7 @@ $('test-spin').addEventListener('click', async () => {
   btn.disabled = true;
   $('test-result').textContent = 'Spinning…';
   renderPreview();
-  await pvWheel.spinTo(index, { duration: 3200, turns: 4, reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches });
+  await pvWheel.spinTo(pvWheel.segments.findIndex((s) => s.draftIndex === index), { duration: 3200, turns: 4, reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches });
   btn.disabled = false;
   $('test-result').textContent = `Test result: “${segs[index].label}”. Not recorded.`;
 });
@@ -1101,6 +1224,12 @@ function syncDayControls() {
   const input = $('spin-day');
   input.max = today;
   input.value = state.day;
+  const label = !state.day ? 'All days'
+    : state.day === today ? 'Today'
+    : state.day === shiftDay(today, -1) ? 'Yesterday'
+    : parseDay(state.day).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', ...(state.day.slice(0, 4) !== today.slice(0, 4) ? { year: 'numeric' } : {}) });
+  $('day-label').textContent = label;
+  $('day-open').setAttribute('aria-label', `Choose a day. Showing: ${label}`);
   $('day-next').disabled = !state.day || state.day >= today;
   $('day-today').disabled = state.day === today;
   $('day-all').hidden = !state.day;
@@ -1122,6 +1251,14 @@ $('spin-q').addEventListener('input', () => {
   }
 });
 $('spin-day').addEventListener('change', (e) => setDay(e.target.value));
+$('day-open').addEventListener('click', () => {
+  const input = $('spin-day');
+  try {
+    input.showPicker();
+  } catch {
+    input.focus(); // older browsers: the date field takes keyboard input
+  }
+});
 $('day-prev').addEventListener('click', () => setDay(shiftDay(state.day || todayKey(), state.day ? -1 : 0)));
 $('day-next').addEventListener('click', () => state.day && setDay(shiftDay(state.day, 1)));
 $('day-today').addEventListener('click', () => setDay(todayKey()));
@@ -1350,3 +1487,21 @@ function confirmDialog({ title, body, confirmLabel = 'Confirm', danger = true, t
     showLogin('Could not reach the server. Check your connection and try again.');
   }
 })();
+
+// ================= Theme =================
+// The admin keeps its own light/dark choice, so it never changes the game on a shared device.
+const THEME_KEY = 'pk-spin-admin-theme';
+const themeBtn = $('theme-toggle');
+function renderTheme() {
+  const dark = document.documentElement.dataset.theme === 'dark';
+  themeBtn.setAttribute('aria-pressed', String(dark));
+  themeBtn.title = dark ? 'Switch to light theme' : 'Switch to dark theme';
+}
+themeBtn.addEventListener('click', () => {
+  const dark = document.documentElement.dataset.theme !== 'dark';
+  if (dark) document.documentElement.dataset.theme = 'dark';
+  else delete document.documentElement.dataset.theme;
+  try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch { /* ignore */ }
+  renderTheme();
+});
+renderTheme();

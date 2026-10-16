@@ -1,19 +1,7 @@
 /* PharmKulen Spin — player game.
    App-style layout: top bar, full-height wheel stage, tabbed side panel. */
 
-/* ---------- Dark theme (opt-in via the top-bar toggle) ---------- */
-html[data-theme='dark'] {
-  color-scheme: dark;
-  --ink: #e7f6f6;
-  --ink-2: #b4d0d2;
-  --ink-3: #8aaaad;
-  --line: #1d454b;
-  --line-2: #2a5a60;
-  --surface: #0e2f34;
-  --surface-2: #0a262a;
-  --surface-3: #134046;
-  --accent-text: #6fe6cb;
-}
+/* Dark theme colours and shared component touch-ups live in base.css. */
 :root {
   --accent-text: var(--teal-700);
   --topbar-h: 60px;
@@ -53,13 +41,10 @@ html[data-theme='dark'] .topbar {
   height: 44px;
   width: auto;
 }
-/* The logo has a white background; give it a white chip on dark surfaces. */
-html[data-theme='dark'] .brand {
-  background: #fff;
-  padding: 2px 8px;
-}
-html[data-theme='dark'] .brand img {
-  height: 38px;
+/* Dark theme: the logo sits straight on the dark bar. The PharmKulen logo switches to its
+   version with light "Pharm" lettering; an uploaded logo is shown as it is. */
+html[data-theme='dark'] .brand img[src='/assets/pharmkulen-logo.png'] {
+  content: url('/assets/pharmkulen-logo-dark.png');
 }
 .topbar-actions {
   display: flex;
@@ -87,13 +72,6 @@ html[data-theme='dark'] .brand img {
 .icon-btn svg {
   width: 20px;
   height: 20px;
-}
-.icon-sun,
-html[data-theme='dark'] .icon-moon {
-  display: none;
-}
-html[data-theme='dark'] .icon-sun {
-  display: block;
 }
 .sound-off,
 .icon-shrink,
@@ -162,9 +140,36 @@ html[data-theme='dark'] .stage {
 }
 .stage::after {
   background: var(--art-scene);
-  -webkit-mask: url('../assets/bg-pharmacy-scene.svg') center bottom / max(1400px, 100%) auto no-repeat;
-  mask: url('../assets/bg-pharmacy-scene.svg') center bottom / max(1400px, 100%) auto no-repeat;
+  -webkit-mask: url('../assets/bg-pharmacy-scene.svg') center bottom / max(1200px, 100%) auto no-repeat;
+  mask: url('../assets/bg-pharmacy-scene.svg') center bottom / max(1200px, 100%) auto no-repeat;
 }
+/* The brand logo, faint, twice per 360px pattern tile (built by app.js, follows Admin → Branding). */
+.stage-logos {
+  position: absolute;
+  inset: 0 -360px 0 0; /* one spare column so the right edge is always covered */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 360px);
+  grid-auto-rows: 360px;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.1;
+  -webkit-mask-image: linear-gradient(#000 40%, transparent 85%);
+  mask-image: linear-gradient(#000 40%, transparent 85%);
+}
+html[data-theme='dark'] .stage-logos {
+  opacity: 0.14;
+}
+.stage-logos > div {
+  position: relative;
+}
+.stage-logo {
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+.stage-logo-a { left: 87px; top: 81px; transform: rotate(-8deg); }
+.stage-logo-b { left: 209px; top: 189px; width: 34px; height: 34px; transform: rotate(10deg); }
 .stage > .stage-top,
 .stage > .wheel-area,
 .stage > .spin-controls {
@@ -406,7 +411,8 @@ html[data-theme='dark'] .spin-meta.is-error {
   font-size: 12px;
   font-weight: 800;
   color: #fff;
-  background: var(--teal-600);
+  background: linear-gradient(135deg, var(--green), var(--blue));
+  box-shadow: 0 2px 10px rgba(25, 178, 255, 0.35);
 }
 .panel-tab[aria-selected='false'] .count {
   background: var(--line-2);
@@ -489,55 +495,6 @@ html[data-theme='dark'] .spin-meta.is-error {
   box-shadow: inset 0 0 0 1px rgba(5, 59, 64, 0.15);
 }
 
-.latest:empty {
-  display: none;
-}
-.latest-card {
-  display: grid;
-  grid-template-columns: 48px 1fr;
-  gap: 14px;
-  align-items: center;
-  margin-bottom: 16px;
-  padding: 14px;
-  border-radius: var(--radius);
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  animation: pop 0.4s ease;
-}
-.latest-dot {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  font-size: 22px;
-  font-weight: 900;
-}
-.latest-kicker {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent-text);
-}
-.latest-label {
-  font-weight: 800;
-  font-size: 18px;
-}
-.latest-desc {
-  color: var(--ink-2);
-  font-size: 14px;
-}
-.latest-code {
-  margin-top: 4px;
-  font-family: var(--mono);
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--accent-text);
-}
-@keyframes pop {
-  from { transform: scale(0.96); opacity: 0; }
-}
 .pane-head {
   display: flex;
   align-items: center;
@@ -553,101 +510,6 @@ html[data-theme='dark'] .spin-meta.is-error {
   font-size: 15px;
   margin: 6px 0;
 }
-.history {
-  list-style: none;
-  margin: 8px 0;
-  padding: 0;
-  display: grid;
-}
-.history li {
-  display: grid;
-  grid-template-columns: 34px 1fr auto;
-  gap: 10px;
-  align-items: center;
-  padding: 9px 4px;
-  border-bottom: 1px solid var(--line);
-}
-.history li:last-child {
-  border-bottom: 0;
-}
-.history .dot {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  display: grid;
-  place-items: center;
-  font-size: 15px;
-  font-weight: 900;
-}
-.history .h-label {
-  font-weight: 700;
-}
-.history .h-code {
-  display: block;
-  font-family: var(--mono);
-  font-size: 13px;
-  color: var(--accent-text);
-}
-.history time {
-  font-size: 13px;
-  color: var(--ink-3);
-  font-variant-numeric: tabular-nums;
-}
-
-.panel-foot {
-  border-top: 1px solid var(--line);
-  padding: 14px 18px 18px;
-  background: var(--surface-2);
-}
-.foot-title {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.steps {
-  list-style: none;
-  counter-reset: step;
-  margin: 10px 0 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-}
-.steps li {
-  counter-increment: step;
-  display: grid;
-  grid-template-columns: 24px 1fr;
-  gap: 10px;
-  align-items: start;
-  font-size: 14px;
-  color: var(--ink-2);
-}
-.steps li::before {
-  content: counter(step);
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  font-weight: 800;
-  font-size: 12px;
-  color: #fff;
-  background: var(--teal-600);
-}
-.steps li:nth-child(4n + 2)::before { background: #0b7fc0; }
-.steps li:nth-child(4n + 3)::before { background: #0a8a71; }
-.steps li:nth-child(4n + 4)::before { background: #06636b; }
-
-.disclaimer {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--line-2);
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--ink-3);
-}
-
 /* Results panel header + empty state */
 .panel-head {
   display: flex;
@@ -688,6 +550,340 @@ html[data-theme='dark'] .spin-meta.is-error {
   font-size: 16px;
 }
 
+/* ---------- Results: latest card, history, how to play ---------- */
+@property --ring {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.pane:focus-visible {
+  border-radius: 0;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--blue) 45%, transparent);
+}
+
+.latest:empty {
+  display: none;
+}
+.latest-card {
+  --c: var(--teal);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1.5px solid var(--line);
+  background: var(--surface-2);
+  animation: latest-in 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.25);
+}
+/* Soft glow in the gift's colour */
+.latest-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--c) 30%, transparent), transparent 60%),
+    radial-gradient(80% 70% at 100% 100%, color-mix(in srgb, var(--blue) 14%, transparent), transparent 70%);
+}
+/* Wins get a slowly rotating gradient border and a one-time shine. */
+.latest-card.is-prize {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--surface-2), var(--surface-2)) padding-box,
+    conic-gradient(from var(--ring), var(--c), var(--turquoise), var(--blue), var(--sky), var(--c)) border-box;
+  box-shadow: 0 10px 30px -12px color-mix(in srgb, var(--c) 70%, transparent);
+  animation: latest-in 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.25), ring 6s linear infinite;
+}
+.latest-card.is-prize::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.22) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: shine 1.2s 0.35s ease-out forwards;
+}
+.latest-dot {
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 900;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--c) 28%, transparent),
+    0 8px 22px -6px color-mix(in srgb, var(--c) 80%, transparent);
+}
+.is-prize .latest-dot {
+  animation: float 3.2s ease-in-out infinite;
+}
+.latest-body {
+  min-width: 0;
+}
+.latest-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+.is-prize .latest-kicker::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--turquoise);
+  box-shadow: 0 0 0 0 var(--turquoise);
+  animation: live 1.8s ease-out infinite;
+}
+.latest-label {
+  font-weight: 900;
+  font-size: 20px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.latest-desc {
+  margin-top: 2px;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+/* Claim code as a tear-off ticket */
+.latest-code {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 18px;
+  border: 1.5px dashed color-mix(in srgb, var(--accent-text) 55%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-text) 10%, var(--surface));
+  -webkit-mask:
+    radial-gradient(circle 8px at 0 50%, #0000 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 8px at 100% 50%, #0000 97%, #000) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle 8px at 0 50%, #0000 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 8px at 100% 50%, #0000 97%, #000) right / 51% 100% no-repeat;
+}
+.latest-code-cap {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.latest-code strong {
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--accent-text);
+  user-select: all;
+}
+
+.history {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.history li {
+  --c: var(--teal);
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 12px 9px 14px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  transition: transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+}
+.history li:first-child {
+  animation: row-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.history li:hover {
+  transform: translateX(3px);
+  background: var(--surface-3);
+}
+/* Gifts stand out: tinted card with a colour bar; "try again" rows stay quiet. */
+.history li.is-prize {
+  border-color: var(--line);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c) 16%, var(--surface-2)), var(--surface-2) 65%);
+}
+.history li.is-prize::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--c);
+  box-shadow: 0 0 10px var(--c);
+}
+.history li.is-prize:hover {
+  border-color: var(--line-2);
+}
+.history .dot {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 900;
+  box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--c) 75%, transparent);
+}
+.history .is-neutral .dot {
+  box-shadow: none;
+  opacity: 0.75;
+}
+.history .h-text {
+  min-width: 0;
+}
+.history .h-label {
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+.history .is-neutral .h-label {
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.history .h-code {
+  display: table;
+  margin-top: 3px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent-text) 14%, transparent);
+}
+.history time {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel-foot {
+  border-top: 1px solid var(--line);
+  padding: 14px 18px 18px;
+  background:
+    radial-gradient(90% 60% at 100% 0%, color-mix(in srgb, var(--blue) 8%, transparent), transparent 70%),
+    var(--surface-2);
+}
+.foot-title {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.steps {
+  list-style: none;
+  counter-reset: step;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.steps li {
+  --g: linear-gradient(135deg, var(--green), var(--teal));
+  counter-increment: step;
+  position: relative;
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 12px;
+  align-items: start;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.steps li::before {
+  content: counter(step);
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  font-weight: 900;
+  font-size: 13px;
+  color: #fff;
+  background: var(--g);
+  box-shadow: 0 4px 10px -3px rgba(5, 143, 154, 0.6);
+}
+/* Dotted line linking the step numbers */
+.steps li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 28px;
+  bottom: -10px;
+  border-left: 2px dotted var(--line-2);
+}
+.steps li:nth-child(4n + 2) { --g: linear-gradient(135deg, var(--sky), var(--blue)); }
+.steps li:nth-child(4n + 3) { --g: linear-gradient(135deg, var(--turquoise), var(--green)); }
+.steps li:nth-child(4n + 4) { --g: linear-gradient(135deg, var(--teal), var(--teal-900)); }
+
+.disclaimer {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line-2);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+@keyframes latest-in {
+  from { transform: translateY(8px) scale(0.95); opacity: 0; }
+}
+@keyframes row-in {
+  from { transform: translateY(-8px); opacity: 0; }
+}
+@keyframes ring {
+  to { --ring: 360deg; }
+}
+@keyframes shine {
+  to { transform: translateX(120%); }
+}
+@keyframes float {
+  50% { transform: translateY(-3px) rotate(-3deg); }
+}
+@keyframes live {
+  70% { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .latest-card,
+  .latest-card.is-prize,
+  .latest-card.is-prize::after,
+  .is-prize .latest-dot,
+  .is-prize .latest-kicker::before,
+  .history li:first-child {
+    animation: none;
+  }
+  .latest-card.is-prize::after {
+    display: none;
+  }
+}
+
 /* Result pictures (uploaded by staff) */
 .latest-dot.has-image,
 .dot.has-image,
@@ -702,6 +898,13 @@ html[data-theme='dark'] .spin-meta.is-error {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+/* Result pictures follow the gift's picture background (see .pic-bg / .pic-bare in base.css). */
+.has-image.pic-bare {
+  background: transparent !important;
+}
+.has-image.pic-bg {
+  background: var(--pic-bg) !important;
 }
 
 
@@ -1151,18 +1354,6 @@ html[data-theme='dark'] .spin-meta.is-error {
   z-index: 1000;
 }
 
-/* Dark theme touch-ups for shared components */
-html[data-theme='dark'] .btn-secondary {
-  background: var(--surface-2);
-  color: var(--ink);
-}
-html[data-theme='dark'] .btn-ghost {
-  color: var(--accent-text);
-}
-html[data-theme='dark'] .btn-primary:hover:not(:disabled) {
-  background: var(--teal);
-}
-
 /* ---------- Small screens ---------- */
 @media (max-width: 1023px) {
   .stage {
@@ -1371,6 +1562,4 @@ html[data-theme='dark'] .btn-primary:hover:not(:disabled) {
   gap: 10px;
   margin-top: 4px;
 }
-html[data-theme='dark'] .field-error {
-  color: #fda29b;
-}
+

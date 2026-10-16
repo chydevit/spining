@@ -20,6 +20,8 @@ export function defaultConfig() {
         'If you land on a gift, show your claim code to a PharmKulen team member.',
       ],
       spinButtonLabel: 'Spin',
+      logo: null, // null = /assets/pharmkulen-logo.png
+      icon: null, // null = /assets/pharmkulen-icon.png
       disclaimer:
         'Just for fun. Gifts are small promotional items with no cash value, are subject to availability, and no outcome is guaranteed.',
     },

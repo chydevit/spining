@@ -1,8 +1,10 @@
 // Arcade slot machine renderer — an alternative to the wheel (style kind "slot").
 // Same interface as Wheel: setSegments, setStyle, spinTo, highlight, setClosed.
 // The server still decides the outcome; all three reels simply stop on it.
-import { labelColorFor, monogram } from './wheel.js';
+import { labelColorFor, monogram, pictureBox } from './wheel.js';
 import { getStyle, resolveColors } from './styles.js';
+import { brandIcon } from './brand.js';
+import { marqueeLights } from './plinko.js';
 
 const LOOPS = 8; // how many times each reel repeats the symbols
 const easeOut = (t) => 1 - (1 - t) ** 3;
@@ -43,9 +45,11 @@ export class SlotMachine {
     this.root.setAttribute('role', 'img');
     const sign = h('div', 'slot-sign');
     const logo = h('img', 'slot-sign-logo');
-    logo.src = '/assets/pharmkulen-icon.png';
+    logo.src = brandIcon();
+    logo.dataset.brand = 'icon';
     logo.alt = '';
-    sign.append(logo, h('span', 'slot-sign-text', 'Lucky Spin'));
+    // Sign frame: 3cqw corners minus half its 0.8cqw border; 4 + 2×9 + 2×1 = 24 bulbs.
+    sign.append(marqueeLights({ rt: 2.6, rb: 2.6, across: 9, down: 1 }), logo, h('span', 'slot-sign-text', 'Lucky Spin'));
 
     const cabinet = h('div', 'slot-cabinet');
     const window_ = h('div', 'slot-window');
@@ -89,6 +93,7 @@ export class SlotMachine {
       img.src = seg.image;
       img.alt = '';
       img.addEventListener('error', () => img.remove());
+      pictureBox(img, seg);
       t.append(img);
       t.classList.add('has-image');
     }
@@ -132,6 +137,7 @@ export class SlotMachine {
             img.src = s.image;
             img.alt = '';
             pic.append(img);
+            pictureBox(pic, s);
           } else {
             pic.textContent = monogram(s.label);
             pic.style.color = labelColorFor(color).color;
@@ -158,6 +164,7 @@ export class SlotMachine {
 
   highlight(index) {
     this.window.classList.toggle('is-win', index >= 0);
+    this.root.classList.toggle('is-won', index >= 0); // all the bulbs flash together
     const seg = this.segments[index];
     this.display.classList.toggle('is-prize', !!seg?.isPrize);
     if (seg) this.setDisplay(seg.isPrize ? 'YOU WON' : seg.label.toUpperCase());
@@ -193,6 +200,7 @@ export class SlotMachine {
       let target = start + minTravel;
       while (r.order[target % n] !== index) target++;
       const dur = reducedMotion ? 700 : duration + ri * 650;
+      if (!reducedMotion) r.reel.classList.add('is-rolling');
       return { start, target, dur };
     });
 
@@ -213,6 +221,7 @@ export class SlotMachine {
           }
           if (t >= 1 && !p.stopped) {
             p.stopped = true;
+            this.reels[ri].reel.classList.remove('is-rolling');
             this.reels[ri].reel.classList.add('bump');
             setTimeout(() => this.reels[ri].reel.classList.remove('bump'), 220);
           }
