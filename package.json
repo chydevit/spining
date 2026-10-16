@@ -1,0 +1,20 @@
+{
+  "name": "pharmkulen-spin",
+  "version": "1.0.0",
+  "description": "Spin — a spin-the-wheel game for PharmKulen, with a protected admin area.",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "pg": "^8.23.1"
+  }
+}

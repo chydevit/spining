@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Admin · Spin · PharmKulen</title>
+    <meta name="theme-color" content="#06636B" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/admin.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#admin-main">Skip to content</a>
+
+    <header class="admin-header">
+      <div class="admin-container header-row">
+        <div class="brand-row">
+          <img src="/assets/pharmkulen-logo.png" alt="PharmKulen" width="282" height="93" class="admin-logo" />
+          <span class="admin-badge">Spin Admin</span>
+        </div>
+        <div id="header-actions" class="header-actions" hidden>
+          <a class="btn btn-ghost btn-sm" href="/" target="_blank" rel="noopener">
+            View game
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg>
+            <span class="visually-hidden">(opens in a new tab)</span>
+          </a>
+          <button id="logout-btn" class="btn btn-secondary btn-sm" type="button">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main id="admin-main" tabindex="-1">
+      <!-- ============ Sign in ============ -->
+      <section id="login-view" class="login-view" hidden aria-labelledby="login-title">
+        <form id="login-form" class="card login-card" novalidate>
+          <img src="/assets/pharmkulen-icon.png" alt="" width="72" height="72" class="login-icon" />
+          <h1 id="login-title">Staff sign-in</h1>
+          <p class="hint center">This area is for authorised PharmKulen staff only.</p>
+          <div id="login-notice" class="notice notice-info" role="status" hidden></div>
+          <div class="field">
+            <label for="login-password">Admin password</label>
+            <div class="password-wrap">
+              <input id="login-password" class="input" type="password" autocomplete="current-password" required aria-describedby="login-error" />
+              <button type="button" class="btn btn-ghost btn-sm reveal" data-reveal="login-password" aria-pressed="false">Show</button>
+            </div>
+            <p id="login-error" class="field-error" role="alert"></p>
+          </div>
+          <button id="login-submit" class="btn btn-primary btn-block" type="submit">Sign in</button>
+        </form>
+      </section>
+
+      <!-- ============ Console ============ -->
+      <section id="app-view" class="admin-container app-view" hidden>
+        <div class="tabs" role="tablist" aria-label="Admin sections">
+          <button class="tab" role="tab" id="tab-dashboard" aria-controls="panel-dashboard" aria-selected="true" data-tab="dashboard">Dashboard</button>
+          <button class="tab" role="tab" id="tab-wheel" aria-controls="panel-wheel" aria-selected="false" tabindex="-1" data-tab="wheel">Wheel &amp; gifts</button>
+          <button class="tab" role="tab" id="tab-style" aria-controls="panel-style" aria-selected="false" tabindex="-1" data-tab="style">Style</button>
+          <button class="tab" role="tab" id="tab-availability" aria-controls="panel-availability" aria-selected="false" tabindex="-1" data-tab="availability">Availability</button>
+          <button class="tab" role="tab" id="tab-branding" aria-controls="panel-branding" aria-selected="false" tabindex="-1" data-tab="branding">Branding</button>
+          <button class="tab" role="tab" id="tab-security" aria-controls="panel-security" aria-selected="false" tabindex="-1" data-tab="security">Security</button>
+        </div>
+
+        <div id="error-summary" class="notice notice-error error-summary" role="alert" tabindex="-1" hidden>
+          <p class="notice-title">Your changes were not saved</p>
+          <ul id="error-list"></ul>
+        </div>
+
+        <div class="workspace">
+          <div class="panels">
+            <!-- ---------- Dashboard ---------- -->
+            <section id="panel-dashboard" class="panel" role="tabpanel" aria-labelledby="tab-dashboard">
+              <div class="panel-header">
+                <div>
+                  <h1 class="panel-heading">Dashboard</h1>
+                  <p class="hint">Live activity for the player-facing wheel. <span id="stats-updated"></span></p>
+                </div>
+                <div class="panel-tools">
+                  <span id="status-pill" class="pill">…</span>
+                  <button id="refresh-stats" class="btn btn-secondary btn-sm" type="button">Refresh</button>
+                  <a class="btn btn-primary btn-sm" href="/api/admin/export.xlsx" download>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14" /></svg>
+                    Export to Excel
+                  </a>
+                  <a class="btn btn-ghost btn-sm" href="/api/admin/export.csv" download>CSV</a>
+                </div>
+              </div>
+
+              <div class="tiles" id="tiles"></div>
+
+              <div class="card block">
+                <div class="block-head">
+                  <h2 class="block-title">Spins, last 14 days</h2>
+                </div>
+                <div id="daily-chart" class="chart"></div>
+                <details class="table-toggle">
+                  <summary>View as table</summary>
+                  <div class="table-scroll"><table class="data-table" id="daily-table"></table></div>
+                </details>
+              </div>
+
+              <div class="card block">
+                <div class="block-head">
+                  <h2 class="block-title">Outcomes &amp; stock</h2>
+                  <p class="hint">Chance is based on current weights and remaining stock.</p>
+                </div>
+                <div class="table-scroll"><table class="data-table" id="outcomes-table"></table></div>
+                <p id="removed-note" class="hint" hidden></p>
+              </div>
+
+              <div class="card block">
+                <div class="block-head">
+                  <h2 class="block-title">Recent spins</h2>
+                  <form id="spin-search" class="search" role="search">
+                    <label for="spin-q" class="visually-hidden">Search by name, phone, claim code or outcome</label>
+                    <input id="spin-q" class="input" type="search" placeholder="Search name, phone or claim code" autocomplete="off" />
+                    <button class="btn btn-secondary btn-sm" type="submit">Search</button>
+                  </form>
+                </div>
+                <div class="table-scroll"><table class="data-table" id="recent-table"></table></div>
+              </div>
+
+              <div class="card block danger-zone">
+                <div>
+                  <h2 class="block-title">Reset statistics</h2>
+                  <p class="hint">Deletes the spin history, claim codes and players’ names and phone numbers. Export to Excel first if you need a copy. Gift stock and wheel settings are not changed.</p>
+                </div>
+                <button id="reset-stats" class="btn btn-secondary btn-sm danger-outline" type="button">Reset statistics…</button>
+              </div>
+            </section>
+
+            <!-- ---------- Wheel & gifts ---------- -->
+            <section id="panel-wheel" class="panel" role="tabpanel" aria-labelledby="tab-wheel" hidden>
+              <div class="panel-header">
+                <div>
+                  <h1 class="panel-heading">Wheel &amp; gifts</h1>
+                  <p class="hint">Every segment is the same size on the wheel. <strong>Weight</strong> sets how likely it is; <strong>stock</strong> limits how many times a gift can be won.</p>
+                </div>
+                <div class="panel-tools">
+                  <button id="add-segment" class="btn btn-primary btn-sm" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                    Add segment
+                  </button>
+                </div>
+              </div>
+              <div id="money-warning" class="notice notice-warning" role="status" hidden></div>
+              <div id="style-color-note" class="notice notice-info" role="status" hidden></div>
+              <ol id="segment-list" class="segment-list"></ol>
+              <p class="hint"><span id="segment-count"></span> Leave stock blank for outcomes that never run out (like “Try Again”).</p>
+            </section>
+
+            <!-- ---------- Availability ---------- -->
+            <section id="panel-style" class="panel" role="tabpanel" aria-labelledby="tab-style" hidden>
+              <div class="panel-header">
+                <div>
+                  <h1 class="panel-heading">Wheel style</h1>
+                  <p class="hint">Pick a look for the player wheel. Your gifts, images, chances and stock stay the same — only the design changes.</p>
+                </div>
+                <div class="panel-tools">
+                  <button id="random-style" class="btn btn-secondary btn-sm" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>
+                    Surprise me
+                  </button>
+                </div>
+              </div>
+              <div id="style-gallery" class="style-gallery" role="group" aria-label="Wheel styles"></div>
+            </section>
+
+            <section id="panel-availability" class="panel" role="tabpanel" aria-labelledby="tab-availability" hidden>
+              <div class="panel-header">
+                <div>
+                  <h1 class="panel-heading">Availability</h1>
+                  <p class="hint">Control when players can spin and how often.</p>
+                </div>
+              </div>
+              <div class="card block form-grid">
+                <label class="switch">
+                  <input id="av-enabled" type="checkbox" />
+                  <span>Game is open to players</span>
+                </label>
+                <p id="av-status" class="hint"></p>
+
+                <label class="switch">
+                  <input id="av-details" type="checkbox" aria-describedby="av-details-hint" />
+                  <span>Ask players for their name and phone number before spinning</span>
+                </label>
+                <p id="av-details-hint" class="hint">Each spin is saved with the player’s name and phone so you can check claims and export to Excel. The form tells players their details are only used to run the game and hand out gifts.</p>
+
+                <fieldset class="fieldset">
+                  <legend>Schedule (optional)</legend>
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="av-start">Opens at</label>
+                      <div class="inline">
+                        <input id="av-start" class="input" type="datetime-local" />
+                        <button class="btn btn-ghost btn-sm" type="button" data-clear="av-start">Clear</button>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label for="av-end">Closes at</label>
+                      <div class="inline">
+                        <input id="av-end" class="input" type="datetime-local" />
+                        <button class="btn btn-ghost btn-sm" type="button" data-clear="av-end">Clear</button>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="hint">Times use this computer’s time zone.</p>
+                </fieldset>
+
+                <div class="field">
+                  <label for="av-limit">Spins per player</label>
+                  <div class="inline limit-row">
+                    <input id="av-limit" class="input" type="number" min="0" max="100" step="1" inputmode="numeric" aria-describedby="av-limit-hint" />
+                    <label for="av-period" class="visually-hidden">Limit period</label>
+                    <select id="av-period" class="select" aria-describedby="av-limit-hint">
+                      <option value="total">in total (new name &amp; phone to play again)</option>
+                      <option value="day">per day</option>
+                    </select>
+                  </div>
+                  <p id="av-limit-hint" class="hint">Use 0 for unlimited. Counted per phone number when names and phones are collected, otherwise per browser.</p>
+                </div>
+
+                <div class="field">
+                  <label for="av-closed">Message shown when closed</label>
+                  <textarea id="av-closed" class="textarea" maxlength="160" rows="2"></textarea>
+                </div>
+              </div>
+            </section>
+
+            <!-- ---------- Branding ---------- -->
+            <section id="panel-branding" class="panel" role="tabpanel" aria-labelledby="tab-branding" hidden>
+              <div class="panel-header">
+                <div>
+                  <h1 class="panel-heading">Branding</h1>
+                  <p class="hint">The PharmKulen logo is fixed. Edit the words players see.</p>
+                </div>
+              </div>
+              <div class="card block form-grid">
+                <div class="two-col">
+                  <div class="field">
+                    <label for="br-title">Game title</label>
+                    <input id="br-title" class="input" maxlength="40" />
+                  </div>
+                  <div class="field">
+                    <label for="br-button">Spin button label</label>
+                    <input id="br-button" class="input" maxlength="16" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="br-tagline">Tagline</label>
+                  <input id="br-tagline" class="input" maxlength="140" />
+                </div>
+                <div class="field">
+                  <label for="br-instructions">How-to-play steps</label>
+                  <textarea id="br-instructions" class="textarea" rows="4" aria-describedby="br-instructions-hint"></textarea>
+                  <p id="br-instructions-hint" class="hint">One step per line, up to 6 steps.</p>
+                </div>
+                <div class="field">
+                  <label for="br-disclaimer">Footer note</label>
+                  <textarea id="br-disclaimer" class="textarea" rows="3" maxlength="300" aria-describedby="br-disclaimer-hint"></textarea>
+                  <p id="br-disclaimer-hint" class="hint">Keep it clear that gifts have no cash value and nothing is guaranteed.</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- ---------- Security ---------- -->
+            <section id="panel-security" class="panel" role="tabpanel" aria-labelledby="tab-security" hidden>
+              <div class="panel-header">
+                <div>
+                  <h1 class="panel-heading">Security</h1>
+                  <p class="hint">Sessions end after 8 hours without activity. Changing the password signs out every other device.</p>
+                </div>
+              </div>
+              <form id="password-form" class="card block form-grid narrow-form" novalidate>
+                <h2 class="block-title">Change admin password</h2>
+                <div class="field">
+                  <label for="pw-current">Current password</label>
+                  <input id="pw-current" class="input" type="password" autocomplete="current-password" required />
+                </div>
+                <div class="field">
+                  <label for="pw-new">New password</label>
+                  <input id="pw-new" class="input" type="password" autocomplete="new-password" minlength="10" required aria-describedby="pw-new-hint" />
+                  <p id="pw-new-hint" class="hint">At least 10 characters.</p>
+                </div>
+                <div class="field">
+                  <label for="pw-confirm">Confirm new password</label>
+                  <input id="pw-confirm" class="input" type="password" autocomplete="new-password" required />
+                </div>
+                <p id="pw-error" class="field-error" role="alert"></p>
+                <div><button id="pw-submit" class="btn btn-primary" type="submit">Update password</button></div>
+              </form>
+            </section>
+          </div>
+
+          <!-- ---------- Live preview ---------- -->
+          <aside id="preview" class="preview" aria-labelledby="preview-title" hidden>
+            <div class="card preview-card">
+              <div class="preview-head">
+                <h2 id="preview-title" class="block-title">Player preview</h2>
+                <span id="preview-state" class="pill pill-plain">Saved</span>
+              </div>
+              <div class="preview-screen">
+                <img src="/assets/pharmkulen-logo.png" alt="" class="preview-logo" width="282" height="93" />
+                <p id="pv-title" class="pv-title"></p>
+                <p id="pv-tagline" class="pv-tagline"></p>
+                <div class="pv-wheel-wrap">
+                  <div id="pv-wheel"></div>
+                  <div id="pv-closed" class="pv-closed" hidden></div>
+                </div>
+                <span id="pv-button" class="pv-button" aria-hidden="true"></span>
+              </div>
+              <div class="preview-foot">
+                <button id="test-spin" class="btn btn-secondary btn-sm" type="button">Test spin</button>
+                <p id="test-result" class="hint" aria-live="polite">Test spins use your unsaved settings and are not recorded.</p>
+              </div>
+            </div>
+
+            <div class="card entries-card">
+              <div class="entries-head">
+                <h2 id="entries-title" class="block-title">On the wheel <span id="entries-count" class="count">0</span></h2>
+              </div>
+              <p class="hint">Everything players could land on, with the chance of each. Select one to edit it.</p>
+              <ul id="entries" class="entries" aria-labelledby="entries-title"></ul>
+            </div>
+          </aside>
+        </div>
+
+        <!-- ---------- Save bar ---------- -->
+        <div id="save-bar" class="save-bar" hidden>
+          <div class="save-inner">
+            <p id="save-status" class="save-status" role="status">You have unsaved changes.</p>
+            <div class="save-actions">
+              <button id="discard-btn" class="btn btn-ghost btn-sm" type="button">Discard</button>
+              <button id="save-btn" class="btn btn-primary" type="button">Save changes</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-body">
+      <form method="dialog" id="confirm-form">
+        <h2 id="confirm-title"></h2>
+        <p id="confirm-body"></p>
+        <div id="confirm-type-wrap" class="field" hidden>
+          <label for="confirm-type" id="confirm-type-label"></label>
+          <input id="confirm-type" class="input" autocomplete="off" />
+        </div>
+        <div class="confirm-actions">
+          <button value="cancel" class="btn btn-secondary" type="submit" formnovalidate>Cancel</button>
+          <button id="confirm-ok" value="ok" class="btn btn-danger" type="submit"></button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toasts" class="toast-region" aria-live="polite"></div>
+    <div id="chart-tip" class="chart-tip" role="tooltip" hidden></div>
+
+    <script type="module" src="/js/admin.js"></script>
+  </body>
+</html>

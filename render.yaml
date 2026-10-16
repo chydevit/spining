@@ -1,0 +1,38 @@
+# Render Blueprint — creates the web service and its PostgreSQL database together.
+# In Render: New → Blueprint → pick this repository → Apply.
+#
+# Plans: "free" works for trying it out, but
+#   • a free web service sleeps after 15 min without visitors (first visit then takes ~1 min), and
+#   • a FREE DATABASE EXPIRES 30 DAYS AFTER CREATION and is deleted 14 days later.
+# For a real event with customer data, use paid plans, e.g. web "0.5c-512mb" and database "0.1c-256mb".
+services:
+  - type: web
+    name: pharmkulen-spin
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: singapore
+    plan: free
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pharmkulen-spin-db
+          property: connectionString
+      - key: ADMIN_PASSWORD # only used the very first time, to create the admin account
+        sync: false
+      - key: COOKIE_SECURE
+        value: "1"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: TZ
+        value: Asia/Phnom_Penh
+
+databases:
+  - name: pharmkulen-spin-db
+    region: singapore
+    plan: free
+    databaseName: pharmkulen_spin
+    user: pharmkulen
+    # Outside connections need Render's generated password. After copying your local data
+    # (scripts/migrate-to-postgres.js), you can block them entirely with:  ipAllowList: []

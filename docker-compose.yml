@@ -1,0 +1,32 @@
+# Run the production setup locally: app + PostgreSQL.
+#   docker compose up --build      → http://localhost:3000
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: pharmkulen_spin
+      POSTGRES_USER: pharmkulen
+      POSTGRES_PASSWORD: pharmkulen-local
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pharmkulen -d pharmkulen_spin"]
+      interval: 3s
+      retries: 20
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://pharmkulen:pharmkulen-local@db:5432/pharmkulen_spin
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-please}
+      TZ: Asia/Phnom_Penh
+    ports:
+      - "3000:10000"
+
+volumes:
+  pgdata:

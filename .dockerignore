@@ -1,0 +1,12 @@
+# Never bake local data (passwords, customer names/phones, uploads) into the image.
+data/
+node_modules/
+test/
+.git/
+.github/
+.env
+.env.*
+*.log
+*.tmp
+.DS_Store
+docker-compose.yml
