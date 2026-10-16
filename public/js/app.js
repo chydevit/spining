@@ -1,5 +1,5 @@
 // PharmKulen Spin — player game.
-import { labelColorFor } from './wheel.js';
+import { labelColorFor, monogram } from './wheel.js';
 import { Spinner } from './spinner.js';
 import { getStyle } from './styles.js';
 import { Sound, confetti } from './fx.js';
@@ -188,11 +188,11 @@ function resultIcon(entry, className) {
     const img = document.createElement('img');
     img.src = entry.image;
     img.alt = '';
-    img.addEventListener('error', () => { img.remove(); box.textContent = resultGlyph(entry.isPrize); });
+    img.addEventListener('error', () => { img.remove(); box.textContent = monogram(entry.label); });
     box.classList.add('has-image');
     box.append(img);
   } else {
-    box.textContent = resultGlyph(entry.isPrize);
+    box.textContent = monogram(entry.label);
   }
   return box;
 }
@@ -201,10 +201,6 @@ function bump(el) {
   el.classList.remove('bump');
   void el.offsetWidth; // restart the animation
   el.classList.add('bump');
-}
-
-function resultGlyph(isPrize) {
-  return isPrize ? '★' : '✓';
 }
 
 function renderLatest(entry) {
@@ -267,7 +263,7 @@ function applyStyle(id) {
   const style = getStyle(id);
   if (wheel.style.id !== style.id) wheel.setStyle(style);
   // Height ÷ width of each machine (measured), used by the CSS to fit it on screen.
-  const ratio = { slot: 1.25, capsule: 1.14, plinko: 1.34 }[style.kind] ?? 1;
+  const ratio = { slot: 1.25, capsule: 1.14, plinko: 1.34, claw: 1.36 }[style.kind] ?? 1;
   document.querySelector('.wheel-wrap').style.setProperty('--ar', ratio);
   if (style.glow) $('play').style.setProperty('--wheel-glow', style.glow);
   else $('play').style.removeProperty('--wheel-glow');

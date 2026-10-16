@@ -327,3 +327,53 @@ test('"in total" limit: a phone number can only play once, a new name and phone 
   const next = await call('/api/spin', { method: 'POST', body: who('015555002', 'Rithy'), cookie: device });
   assert.equal(next.res.status, 200);
 });
+
+test('spins can be filtered by day, and one day can be deleted', async () => {
+  const cookie = await login();
+  const today = (await call('/api/admin/stats', { cookie })).data.days.at(-1).day;
+
+  const day = await call(`/api/admin/spins?day=${today}`, { cookie });
+  assert.equal(day.res.status, 200);
+  assert.ok(day.data.total > 0);
+  assert.ok(day.data.spins.every((s) => s.at));
+  const other = await call('/api/admin/spins?day=2000-01-01', { cookie });
+  assert.equal(other.data.total, 0);
+  assert.equal((await call('/api/admin/spins?day=yesterday', { cookie })).res.status, 400);
+
+  // Search and day combine.
+  const both = await call(`/api/admin/spins?day=${today}&q=015555001`, { cookie });
+  assert.equal(both.data.total, 1);
+
+  const noConfirm = await call('/api/admin/spins/delete-day', { method: 'POST', cookie, body: { day: today } });
+  assert.equal(noConfirm.res.status, 400);
+  const anon = await call('/api/admin/spins/delete-day', { method: 'POST', body: { day: today, confirm: 'DELETE' } });
+  assert.equal(anon.res.status, 401);
+
+  const del = await call('/api/admin/spins/delete-day', { method: 'POST', cookie, body: { day: today, confirm: 'DELETE' } });
+  assert.equal(del.res.status, 200);
+  assert.equal(del.data.deleted, day.data.total);
+  assert.equal((await call(`/api/admin/spins?day=${today}`, { cookie })).data.total, 0);
+
+  // The "in total" limit is counted from spins, so that player can play again.
+  const again = await call('/api/spin', { method: 'POST', body: who('015555001', 'Vanna') });
+  assert.equal(again.res.status, 200);
+});
+
+test('styles and scripts revalidate with an ETag', async () => {
+  const first = await fetch(`${base}/css/base.css`);
+  assert.equal(first.headers.get('cache-control'), 'no-cache');
+  const etag = first.headers.get('etag');
+  assert.ok(etag);
+  const second = await fetch(`${base}/css/base.css`, { headers: { 'If-None-Match': etag } });
+  assert.equal(second.status, 304);
+});
+
+test('the claw machine style can be chosen and is sent to players', async () => {
+  const cookie = await login();
+  const { data: cfgRes } = await call('/api/admin/config', { cookie });
+  const config = { ...cfgRes.config, wheelStyle: 'claw' };
+  const saved = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
+  assert.equal(saved.res.status, 200);
+  assert.equal(saved.data.config.wheelStyle, 'claw');
+  assert.equal((await call('/api/game')).data.wheelStyle, 'claw');
+});

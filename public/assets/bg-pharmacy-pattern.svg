@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360" viewBox="0 0 360 360" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Pharmacy objects, loosely scattered. Used as a CSS mask, so only the shape matters. -->
+
+  <!-- pill bottle -->
+  <g transform="translate(34 26) rotate(-8)">
+    <rect x="0" y="10" width="30" height="40" rx="5" />
+    <rect x="-2" y="0" width="34" height="10" rx="3" />
+    <path d="M6 22h18M6 38h12" />
+    <path d="M15 26v8M11 30h8" stroke-width="1.6" />
+  </g>
+
+  <!-- capsule -->
+  <g transform="translate(150 40) rotate(-32)">
+    <rect x="0" y="0" width="44" height="16" rx="8" />
+    <path d="M22 0v16" />
+    <path d="M5 5h6" stroke-width="1.4" />
+  </g>
+
+  <!-- blister pack -->
+  <g transform="translate(250 22) rotate(6)">
+    <rect x="0" y="0" width="56" height="38" rx="5" />
+    <circle cx="12" cy="12" r="5" />
+    <circle cx="28" cy="12" r="5" />
+    <circle cx="44" cy="12" r="5" />
+    <circle cx="12" cy="27" r="5" />
+    <circle cx="28" cy="27" r="5" />
+    <path d="M40 23l8 8M48 23l-8 8" stroke-width="1.4" />
+  </g>
+
+  <!-- mortar and pestle -->
+  <g transform="translate(40 150)">
+    <path d="M0 14h46" />
+    <path d="M3 14c0 14 9 22 20 22s20-8 20-22" />
+    <path d="M15 36l-3 8h22l-3-8" />
+    <path d="M30 14L46 -6" stroke-width="3" />
+  </g>
+
+  <!-- prescription pad -->
+  <g transform="translate(152 128) rotate(5)">
+    <rect x="0" y="0" width="38" height="50" rx="4" />
+    <path d="M12 -3h14v6H12z" />
+    <path d="M9 14v14M9 14h6a4 4 0 0 1 0 8H9M14 22l7 7M21 22l-6 7" stroke-width="1.6" />
+    <path d="M9 37h20M9 43h14" stroke-width="1.4" />
+  </g>
+
+  <!-- first-aid box -->
+  <g transform="translate(262 146) rotate(-4)">
+    <path d="M14 0h22v8H14z" />
+    <rect x="0" y="8" width="50" height="34" rx="5" />
+    <path d="M25 17v16M17 25h16" stroke-width="2.6" />
+  </g>
+
+  <!-- round tablets -->
+  <g transform="translate(108 252)">
+    <circle cx="0" cy="0" r="10" />
+    <path d="M-7 7l14-14" stroke-width="1.6" />
+    <circle cx="24" cy="12" r="7" />
+  </g>
+
+  <!-- delivery parcel -->
+  <g transform="translate(206 244) rotate(-6)">
+    <path d="M0 12l26-12 26 12-26 12z" />
+    <path d="M0 12v28l26 12V24M52 12v28L26 52" />
+    <path d="M13 6l26 12v8" stroke-width="1.6" />
+    <path d="M39 33v8M35 37h8" stroke-width="1.6" />
+  </g>
+
+  <!-- heartbeat line -->
+  <path d="M10 316h26l8-16 10 30 8-20 5 6h24" />
+
+  <!-- dropper bottle -->
+  <g transform="translate(318 262) rotate(10)">
+    <path d="M6 0h8v10H6z" />
+    <path d="M2 10h16v6H2z" />
+    <rect x="0" y="16" width="20" height="30" rx="4" />
+    <path d="M5 26h10" stroke-width="1.4" />
+  </g>
+
+  <!-- small cross marks -->
+  <path d="M110 92v10M105 97h10" stroke-width="1.6" />
+  <path d="M232 112v8M228 116h8" stroke-width="1.6" />
+  <path d="M316 92v8M312 96h8" stroke-width="1.6" />
+  <path d="M60 236v8M56 240h8" stroke-width="1.6" />
+  <path d="M292 330v8M288 334h8" stroke-width="1.6" />
+</svg>

@@ -1,7 +1,7 @@
 // Capsule (gacha) machine renderer — style kind "capsule".
 // Same interface as Wheel / SlotMachine: setSegments, setStyle, spinTo, highlight, setClosed.
 // Turning the knob drops one capsule in the server-chosen colour, which opens to show the result.
-import { labelColorFor } from './wheel.js';
+import { labelColorFor, monogram } from './wheel.js';
 import { getStyle, resolveColors } from './styles.js';
 
 const PILE = 32; // capsules shown in the dome
@@ -41,10 +41,10 @@ export class CapsuleMachine {
 
     // Sign with gift pictures (like the character banner on real machines)
     this.sign = h('div', 'cap-sign');
-    this.signPics = h('div', 'cap-sign-pics');
-    const signText = h('div', 'cap-sign-text');
-    signText.append(h('span', 'cap-sign-small', 'PharmKulen'), h('span', 'cap-sign-big', 'LUCKY CAPSULE'));
-    this.sign.append(this.signPics, signText);
+    const logo = h('img', 'cap-sign-logo');
+    logo.src = '/assets/pharmkulen-icon.png';
+    logo.alt = '';
+    this.sign.append(logo, h('span', 'cap-sign-big', 'Lucky Capsule'));
 
     // Glass dome with a pile of capsules
     this.dome = h('div', 'cap-dome');
@@ -98,30 +98,11 @@ export class CapsuleMachine {
         c.style.setProperty('--r', `${Math.round((rand() - 0.5) * 140)}deg`);
         c.style.setProperty('--d', `${(rand() * 0.25).toFixed(2)}s`);
         c.style.zIndex = 20 - row; // lower rows sit in front
+        c.style.setProperty('--s', `${(14.5 + rand() * 3).toFixed(1)}%`); // slightly mixed sizes
         caps.push(c);
       }
     }
     this.pile.replaceChildren(...caps);
-
-    // Gift pictures on the sign
-    const gifts = segments.filter((s) => s.isPrize && s.available !== false)
-      .filter((s, i, arr) => arr.findIndex((x) => x.label === s.label) === i).slice(0, 3);
-    this.signPics.replaceChildren(...gifts.map((s) => {
-      const pic = h('span', 'cap-sign-pic');
-      const i = segments.indexOf(s);
-      pic.style.setProperty('--c', this.colors[i]);
-      if (s.image) {
-        const img = h('img');
-        img.src = s.image;
-        img.alt = '';
-        pic.append(img);
-      } else {
-        pic.textContent = '★';
-        pic.style.color = labelColorFor(this.colors[i]).color;
-      }
-      return pic;
-    }));
-    this.signPics.hidden = gifts.length === 0;
 
     this.reset();
     this.root.setAttribute('aria-label', `${this.label} with ${n} possible outcomes: ${segments.map((s) => s.label).join(', ')}.`);
@@ -131,6 +112,7 @@ export class CapsuleMachine {
     this.drop.className = 'cap-drop';
     this.reveal.className = 'cap-reveal';
     this.reveal.replaceChildren();
+    this.root.classList.remove('is-prize');
   }
 
   highlight(index) {
@@ -151,12 +133,14 @@ export class CapsuleMachine {
       img.alt = '';
       pic.append(img);
     } else {
-      pic.textContent = seg.isPrize ? '★' : '✓';
+      pic.textContent = monogram(seg.label);
       pic.style.color = labelColorFor(color).color;
     }
+    if (seg.isPrize) card.append(h('span', 'cap-reveal-caption', 'You won'));
     card.append(pic, h('span', 'cap-reveal-label', seg.label));
     this.reveal.replaceChildren(card);
     this.reveal.classList.add('show');
+    this.root.classList.toggle('is-prize', !!seg.isPrize);
   }
 
   async spinTo(index, { reducedMotion = false } = {}) {

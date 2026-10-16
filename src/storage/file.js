@@ -48,6 +48,7 @@ export class FileStore {
   addSpin() { return this.write(); }
   updateSpin() { return this.write(); }
   clearSpins() { return this.write(); }
+  deleteSpinsByDay() { return this.write(); }
 
   // ----- uploads -----
   async putUpload(name, mime, buf) {

@@ -33,7 +33,6 @@
       <section id="play" class="stage" aria-labelledby="game-title" tabindex="-1">
         <div class="stage-top">
           <div class="stage-title">
-            <p class="eyebrow">PharmKulen game</p>
             <h1 id="game-title" class="title">Spin</h1>
             <p id="tagline" class="tagline"></p>
           </div>
@@ -100,7 +99,7 @@
           <div id="history-empty" class="results-empty">
             <img src="/assets/pharmkulen-icon.png" alt="" width="64" height="64" />
             <p class="empty-title">No spins yet</p>
-            <p class="empty">Give the wheel a whirl. Your results and any claim codes will show up here.</p>
+            <p class="empty">Your results and claim codes will appear here.</p>
           </div>
           <p class="hint">Saved on this device only.</p>
         </div>
@@ -149,6 +148,19 @@
           <span class="rd-spark rd-spark-2">✦</span>
           <span class="rd-spark rd-spark-3">✦</span>
           <div id="result-badge" class="result-badge"></div>
+          <!-- Shown only on "Thank you!" (no-gift) results -->
+          <div class="rd-sticker">
+            <svg class="rd-cry" viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r="28" fill="#FFD54A" stroke="#E0A12A" stroke-width="2.5" />
+              <path d="M16 21 L26 24 M48 21 L38 24" stroke="#5B3A0A" stroke-width="3" stroke-linecap="round" />
+              <path d="M18 31 Q23 27 28 31 M36 31 Q41 27 46 31" fill="none" stroke="#5B3A0A" stroke-width="3" stroke-linecap="round" />
+              <path d="M23 50 Q32 38 41 50 Z" fill="#7A2E12" stroke="#5B3A0A" stroke-width="2.5" stroke-linejoin="round" />
+              <path d="M20 33 L20 58 M44 33 L44 58" stroke="#5CC8FF" stroke-width="5" stroke-linecap="round" opacity=".85" />
+              <circle class="rd-tear" cx="20" cy="36" r="3.5" fill="#19B2FF" />
+              <circle class="rd-tear rd-tear-2" cx="44" cy="36" r="3.5" fill="#19B2FF" />
+            </svg>
+            <img src="/assets/pharmkulen-logo.png" alt="" width="282" height="93" />
+          </div>
         </div>
         <p id="result-kicker" class="result-kicker">You won</p>
         <h3 id="result-title" class="result-title"></h3>

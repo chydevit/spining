@@ -117,6 +117,18 @@
                     <button class="btn btn-secondary btn-sm" type="submit">Search</button>
                   </form>
                 </div>
+                <div class="day-filter" role="group" aria-label="Filter spins by day">
+                  <div class="day-picker">
+                    <button id="day-prev" class="btn btn-ghost btn-sm day-step" type="button" aria-label="Previous day">‹</button>
+                    <label for="spin-day" class="visually-hidden">Day</label>
+                    <input id="spin-day" class="input" type="date" />
+                    <button id="day-next" class="btn btn-ghost btn-sm day-step" type="button" aria-label="Next day">›</button>
+                  </div>
+                  <button id="day-today" class="btn btn-secondary btn-sm" type="button">Today</button>
+                  <button id="day-all" class="btn btn-ghost btn-sm" type="button" hidden>All days</button>
+                  <p id="spin-summary" class="hint day-summary" aria-live="polite"></p>
+                  <button id="delete-day" class="btn btn-secondary btn-sm danger-outline" type="button" hidden>Delete this day’s spins…</button>
+                </div>
                 <div class="table-scroll"><table class="data-table" id="recent-table"></table></div>
               </div>
 

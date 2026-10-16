@@ -198,6 +198,10 @@ export class PgStore {
     await this.pool.query('DELETE FROM spins');
   }
 
+  async deleteSpinsByDay(day) {
+    await this.pool.query('DELETE FROM spins WHERE day = $1', [day]);
+  }
+
   // ----- uploads (stored in the database: Render's disk is wiped on deploy) -----
   async putUpload(name, mime, buf) {
     await this.pool.query('INSERT INTO uploads (name, mime, data) VALUES ($1, $2, $3) ON CONFLICT (name) DO NOTHING', [name, mime, buf]);

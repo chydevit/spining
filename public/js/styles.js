@@ -166,7 +166,7 @@ export const WHEEL_STYLES = [
     id: 'slots',
     kind: 'slot', // drawn as a 3-reel slot machine instead of a wheel (see slot.js)
     name: 'Lucky slots',
-    note: 'An arcade slot machine with three reels, a neon sign and a gift panel.',
+    note: 'An arcade slot machine with three reels, a pull lever and a gift panel.',
     palette: null,
     glow: '#44E4BC',
   },
@@ -182,9 +182,17 @@ export const WHEEL_STYLES = [
     id: 'plinko',
     kind: 'plinko', // a pachinko / Plinko drop board (see plinko.js)
     name: 'Lucky drop',
-    note: 'A ball shoots up, bounces down through star pegs and lands in a gift slot.',
+    note: 'A ball shoots up, bounces down through PharmKulen pins and lands in a gift slot.',
     palette: null,
     glow: '#F7D27A',
+  },
+  {
+    id: 'claw',
+    kind: 'claw', // a crane / claw machine (see claw.js)
+    name: 'Claw machine',
+    note: 'The claw slides over, grabs a gift box and drops it in the prize chute.',
+    palette: null,
+    glow: '#7FD6C4',
   },
 ];
 

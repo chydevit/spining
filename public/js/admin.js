@@ -25,6 +25,7 @@ const state = {
   loadedQty: new Map(), // stock values when the draft was loaded (see server merge logic)
   stats: null,
   searchQ: '',
+  day: '', // YYYY-MM-DD filter for Recent spins ('' = all days)
   tab: 'dashboard',
   saving: false,
 };
@@ -957,7 +958,7 @@ function renderDashboard() {
 
   renderDailyChart(s.days);
   renderOutcomes(s);
-  if (!state.searchQ) renderRecent(s.recent);
+  runQuery(); // Recent spins: latest, or the current search / day filter
 }
 
 function renderOutcomes(s) {
@@ -1020,9 +1021,9 @@ function renderRecent(spins) {
           h('td', {}, action),
         );
       })
-    : [h('tr', { class: 'empty-row' }, h('td', { colspan: '5', text: state.searchQ ? `No spins match “${state.searchQ}”.` : 'No spins yet. They will appear here as players spin.' }))];
+    : [h('tr', { class: 'empty-row' }, h('td', { colspan: '5', text: emptyText() }))];
   $('recent-table').replaceChildren(
-    h('caption', { class: 'visually-hidden', text: state.searchQ ? `Spins matching ${state.searchQ}` : 'Most recent spins' }),
+    h('caption', { class: 'visually-hidden', text: filtering() ? 'Filtered spins' : 'Most recent spins' }),
     h('thead', {}, h('tr', {},
       h('th', { scope: 'col', text: 'Time' }), h('th', { scope: 'col', text: 'Player' }), h('th', { scope: 'col', text: 'Outcome' }),
       h('th', { scope: 'col', text: 'Claim code' }), h('th', { scope: 'col', text: 'Gift status' }),
@@ -1038,30 +1039,112 @@ $('recent-table').addEventListener('click', async (e) => {
   try {
     const { spin } = await api(`/api/admin/spins/${btn.dataset.redeem}/redeem`, { method: 'POST', body: { redeemed: btn.dataset.value === 'true' } });
     toast(spin.redeemed ? `${spin.code} marked as handed out.` : `${spin.code} marked as not handed out.`);
-    if (state.searchQ) await runSearch(state.searchQ);
-    await loadStats({ quiet: true });
+    await loadStats({ quiet: true }); // also refreshes a filtered list
   } catch (err) {
     if (err.status !== 401) toast(err.message, 'error');
     btn.disabled = false;
   }
 });
 
-async function runSearch(q) {
-  state.searchQ = q;
-  if (!q) return renderRecent(state.stats?.recent ?? []);
+// ----- Search + day filter for Recent spins -----
+const filtering = () => Boolean(state.searchQ || state.day);
+const fmtDay = (key) => parseDay(key).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+const plural = (n, word) => `${fmtInt(n)} ${word}${n === 1 ? '' : 's'}`;
+/** Today on the server's clock (the last day of the stats chart), falling back to this browser. */
+function todayKey() {
+  const last = state.stats?.days?.at(-1)?.day;
+  if (last) return last;
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function shiftDay(key, by) {
+  const d = parseDay(key);
+  d.setDate(d.getDate() + by);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function emptyText() {
+  if (state.day && state.searchQ) return `No spins on ${fmtDay(state.day)} match “${state.searchQ}”.`;
+  if (state.day) return `No spins on ${fmtDay(state.day)}.`;
+  if (state.searchQ) return `No spins match “${state.searchQ}”.`;
+  return 'No spins yet. They will appear here as players spin.';
+}
+
+let lastResult = { total: 0, prizes: 0 };
+let queryId = 0;
+async function runQuery() {
+  syncDayControls();
+  if (!filtering()) {
+    $('spin-summary').textContent = '';
+    $('delete-day').hidden = true;
+    return renderRecent(state.stats?.recent ?? []);
+  }
+  const id = ++queryId;
+  const params = new URLSearchParams({ limit: state.day ? '200' : '50' });
+  if (state.searchQ) params.set('q', state.searchQ);
+  if (state.day) params.set('day', state.day);
   try {
-    const { spins } = await api(`/api/admin/spins?q=${encodeURIComponent(q)}&limit=50`);
-    renderRecent(spins);
+    const res = await api(`/api/admin/spins?${params}`);
+    if (id !== queryId) return; // a newer filter won
+    lastResult = res;
+    renderRecent(res.spins);
+    const where = state.day ? ` on ${fmtDay(state.day)}` : '';
+    const more = res.total > res.spins.length ? ` · showing the latest ${fmtInt(res.spins.length)}` : '';
+    $('spin-summary').textContent = `${plural(res.total, 'spin')}${where} · ${plural(res.prizes, 'gift')}${more}`;
+    $('delete-day').hidden = !state.day || state.searchQ !== '' || res.total === 0;
   } catch (err) {
     if (err.status !== 401) toast(err.message, 'error');
   }
 }
+
+function syncDayControls() {
+  const today = todayKey();
+  const input = $('spin-day');
+  input.max = today;
+  input.value = state.day;
+  $('day-next').disabled = !state.day || state.day >= today;
+  $('day-today').disabled = state.day === today;
+  $('day-all').hidden = !state.day;
+}
+function setDay(key) {
+  state.day = key;
+  runQuery();
+}
+
 $('spin-search').addEventListener('submit', (e) => {
   e.preventDefault();
-  runSearch($('spin-q').value.trim());
+  state.searchQ = $('spin-q').value.trim();
+  runQuery();
 });
 $('spin-q').addEventListener('input', () => {
-  if (!$('spin-q').value.trim() && state.searchQ) runSearch('');
+  if (!$('spin-q').value.trim() && state.searchQ) {
+    state.searchQ = '';
+    runQuery();
+  }
+});
+$('spin-day').addEventListener('change', (e) => setDay(e.target.value));
+$('day-prev').addEventListener('click', () => setDay(shiftDay(state.day || todayKey(), state.day ? -1 : 0)));
+$('day-next').addEventListener('click', () => state.day && setDay(shiftDay(state.day, 1)));
+$('day-today').addEventListener('click', () => setDay(todayKey()));
+$('day-all').addEventListener('click', () => setDay(''));
+
+$('delete-day').addEventListener('click', async () => {
+  const day = state.day;
+  if (!day) return;
+  const { total, prizes } = lastResult;
+  const ok = await confirmDialog({
+    title: `Delete spins from ${fmtDay(day)}?`,
+    body: `This permanently deletes ${plural(total, 'spin')} (${plural(prizes, 'gift')}) from that day, with their claim codes, names and phone numbers. Players from that day will be able to spin again. Gift stock does not change. Export to Excel first if you need a copy. This cannot be undone.`,
+    confirmLabel: 'Delete spins',
+    typeToConfirm: 'DELETE',
+  });
+  if (!ok) return;
+  try {
+    const { deleted } = await api('/api/admin/spins/delete-day', { method: 'POST', body: { day, confirm: 'DELETE' } });
+    toast(`Deleted ${plural(deleted, 'spin')} from ${fmtDay(day)}.`);
+    await loadStats({ quiet: true });
+  } catch (err) {
+    if (err.status !== 401) toast(err.message, 'error');
+  }
 });
 
 $('reset-stats').addEventListener('click', async () => {
@@ -1076,6 +1159,7 @@ $('reset-stats').addEventListener('click', async () => {
     await api('/api/admin/stats/reset', { method: 'POST', body: { confirm: 'RESET' } });
     toast('Statistics were reset.');
     state.searchQ = '';
+    state.day = '';
     $('spin-q').value = '';
     loadStats();
   } catch (err) {
@@ -1170,6 +1254,13 @@ function renderDailyChart(days) {
   root.addEventListener('pointermove', show);
   root.addEventListener('pointerdown', show);
   root.addEventListener('pointerleave', hide);
+  root.addEventListener('click', (e) => {
+    const col = e.target.closest('.col');
+    if (!col) return;
+    setDay(days[Number(col.dataset.i)].day);
+    $('recent-table').closest('.block').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  });
+  root.querySelectorAll('.col').forEach((c) => c.classList.toggle('is-selected', days[Number(c.dataset.i)].day === state.day));
   box.replaceChildren(root);
 
   $('daily-table').replaceChildren(

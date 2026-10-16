@@ -48,6 +48,7 @@ const PLAYER_COOKIE = 'pk_player';
 const MAX_BODY = 64 * 1024;
 const MAX_IMAGE = 1.5 * 1024 * 1024;
 const UPLOAD_NAME = /^([a-f0-9]{24})\.(png|jpg|webp)$/;
+const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/; // server-local day, as stored on each spin
 const IMAGE_MIME = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' };
 
 /** Identify an uploaded image by its magic bytes (never trust the declared type). */
@@ -501,19 +502,42 @@ export async function createApp({
 
       if (pathname === '/api/admin/spins' && method === 'GET') {
         const q = (url.searchParams.get('q') ?? '').trim().toUpperCase();
+        const day = url.searchParams.get('day') ?? '';
+        if (day && !DAY_KEY.test(day)) throw new HttpError(400, 'Day must look like 2026-10-16.');
         const limit = Math.min(Number(url.searchParams.get('limit')) || 50, 200);
+        const qDigits = q.replace(/[^\d]/g, '');
         const out = [];
-        for (let i = db.spins.length - 1; i >= 0 && out.length < limit; i--) {
+        let total = 0;
+        let prizes = 0;
+        for (let i = db.spins.length - 1; i >= 0; i--) {
           const s = db.spins[i];
-          const qDigits = q.replace(/[^\d]/g, '');
+          if (day && s.day !== day) continue;
           const match = !q
             || (s.code && s.code.includes(q))
             || s.label.toUpperCase().includes(q)
             || (s.name && s.name.toUpperCase().includes(q))
             || (qDigits.length >= 3 && s.phone && s.phone.includes(qDigits));
-          if (match) out.push(publicSpin(s));
+          if (!match) continue;
+          total++;
+          if (s.isPrize) prizes++;
+          if (out.length < limit) out.push(publicSpin(s));
         }
-        return send(res, 200, { spins: out });
+        return send(res, 200, { spins: out, total, prizes });
+      }
+
+      if (pathname === '/api/admin/spins/delete-day' && method === 'POST') {
+        const body = await readJson(req);
+        const day = String(body.day ?? '');
+        if (!DAY_KEY.test(day)) throw new HttpError(400, 'Choose a day to delete.');
+        if (body.confirm !== 'DELETE') throw new HttpError(400, 'Type DELETE to confirm.');
+        const before = db.spins;
+        const kept = before.filter((s) => s.day !== day);
+        const deleted = before.length - kept.length;
+        if (deleted) {
+          db.spins = kept;
+          await persist(() => store.deleteSpinsByDay(day, db), () => { db.spins = before; });
+        }
+        return send(res, 200, { deleted });
       }
 
       const redeemMatch = pathname.match(/^\/api\/admin\/spins\/([0-9a-f-]{36})\/redeem$/);
@@ -629,13 +653,24 @@ export async function createApp({
     fs.stat(file, (err, stat) => {
       if (err || !stat.isFile()) return send(res, 404, 'Not found');
       const ext = path.extname(file);
+      // Pages, styles and scripts are revalidated on every load (cheap 304s), so an update
+      // shows up immediately instead of mixing new HTML with a cached old stylesheet.
+      const revalidate = ext === '.html' || ext === '.css' || ext === '.js';
+      const etag = `W/"${stat.size.toString(36)}-${Math.floor(stat.mtimeMs).toString(36)}"`;
       const headers = {
         ...SECURITY_HEADERS,
         'Content-Type': MIME[ext] ?? 'application/octet-stream',
         'Content-Length': stat.size,
-        'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=300',
+        'Cache-Control': revalidate ? 'no-cache' : 'public, max-age=300',
+        ETag: etag,
       };
       if (rel.startsWith('/admin')) headers['X-Robots-Tag'] = 'noindex, nofollow';
+      if (req.headers['if-none-match'] === etag) {
+        delete headers['Content-Type'];
+        delete headers['Content-Length'];
+        res.writeHead(304, headers);
+        return res.end();
+      }
       res.writeHead(200, headers);
       if (req.method === 'HEAD') return res.end();
       fs.createReadStream(file).pipe(res);

@@ -2,18 +2,21 @@
 // Same interface as Wheel / SlotMachine / CapsuleMachine.
 // A ball shoots up the side lane, bounces down through the pegs and lands in the
 // slot of the result the server already chose (the path is planned to end there).
-import { labelColorFor } from './wheel.js';
+import { labelColorFor, monogram } from './wheel.js';
 import { getStyle, resolveColors } from './styles.js';
 
 // Board geometry, in % of the board box.
 const ROWS = 8;
-const TOP = 14; // first peg row
+const TOP = 16; // first peg row
 const BOTTOM = 61; // last peg row
 const LEFT = 5;
 const RIGHT = 84; // right of this is the launch lane
 const SLOT_TOP = 69;
-const BALL_REST = SLOT_TOP + 4.5; // ball sits at the top of its slot, above the name
+const BALL_REST = SLOT_TOP + 2.4; // ball sits at the top of its slot, just above the badge
 const LANE_X = 92;
+const CX = (LEFT + RIGHT) / 2;
+const SPACING = (RIGHT - LEFT) / (ROWS + 2); // between pegs in a row
+const HALF = SPACING / 2; // one bounce moves the ball half a step left or right
 
 function h(tag, cls, text) {
   const n = document.createElement(tag);
@@ -23,9 +26,10 @@ function h(tag, cls, text) {
 }
 
 const rowY = (r) => TOP + ((BOTTOM - TOP) * r) / (ROWS - 1);
-const pegCols = (r) => (r % 2 ? 7 : 8);
-// Even rows: 8 pegs; odd rows: 7 pegs offset by half a step (staggered).
-const pegX = (r, c) => LEFT + ((RIGHT - LEFT) / 8) * (c + (r % 2 ? 1 : 0.5));
+// A classic Plinko triangle: 3 pegs in the top row, one more in each row below, staggered,
+// so a ball bouncing off a peg lands exactly on a peg of the next row.
+const pegCols = (r) => r + 3;
+const pegX = (r, c) => CX + (c - (r + 2) / 2) * SPACING;
 
 export class PlinkoBoard {
   constructor(stage, { onTick, label = 'Prize drop board', style } = {}) {
@@ -42,7 +46,11 @@ export class PlinkoBoard {
     this.root.setAttribute('role', 'img');
 
     const sign = h('div', 'pk-sign');
-    sign.append(h('span', 'pk-sign-small', 'PharmKulen'), h('span', 'pk-sign-big', 'LUCKY DROP'));
+    const logo = h('img', 'pk-sign-logo');
+    logo.src = '/assets/pharmkulen-icon.png';
+    logo.alt = '';
+    // Sign frame: 4cqw corners minus half its 0.8cqw border; 4 + 2×9 + 2×1 = 24 bulbs.
+    sign.append(this.lights({ rt: 3.6, rb: 3.6, across: 9, down: 1 }), logo, h('span', 'pk-sign-big', 'Lucky Drop'));
 
     const cabinet = h('div', 'pk-cabinet');
     this.board = h('div', 'pk-board');
@@ -51,7 +59,7 @@ export class PlinkoBoard {
     for (let r = 0; r < ROWS; r++) {
       const row = [];
       for (let c = 0; c < pegCols(r); c++) {
-        const p = h('span', 'pk-peg', '★');
+        const p = h('span', 'pk-peg'); // PharmKulen logo pin (see CSS)
         p.style.left = `${pegX(r, c)}%`;
         p.style.top = `${rowY(r)}%`;
         pegLayer.append(p);
@@ -74,6 +82,33 @@ export class PlinkoBoard {
     this.parkBall();
   }
 
+  /**
+   * Marquee bulbs set into a rounded frame, numbered clockwise so they can chase.
+   * rt / rb: corner radii of the frame's centre line (cqw); across / down: bulbs per straight edge.
+   * Keep the total (4 corners + 2 × across + 2 × down) a multiple of 3 so the chase loops evenly.
+   */
+  lights({ rt, rb, across, down }) {
+    const layer = h('div', 'pk-lights');
+    layer.setAttribute('aria-hidden', 'true');
+    const c = (r) => `${(r * (1 - Math.SQRT1_2)).toFixed(2)}cqw`; // bulb on the corner arc at 45°
+    const along = (from, to, n, k) => `calc(${from}cqw + (100% - ${from + to}cqw) * ${((k + 0.5) / n).toFixed(4)})`;
+    const spots = [[c(rt), c(rt)]];
+    for (let k = 0; k < across; k++) spots.push([along(rt, rt, across, k), '0%']);
+    spots.push([`calc(100% - ${c(rt)})`, c(rt)]);
+    for (let k = 0; k < down; k++) spots.push(['100%', along(rt, rb, down, k)]);
+    spots.push([`calc(100% - ${c(rb)})`, `calc(100% - ${c(rb)})`]);
+    for (let k = across - 1; k >= 0; k--) spots.push([along(rb, rb, across, k), '100%']);
+    spots.push([c(rb), `calc(100% - ${c(rb)})`]);
+    for (let k = down - 1; k >= 0; k--) spots.push(['0%', along(rt, rb, down, k)]);
+    spots.forEach(([left, top], i) => {
+      const bulb = h('span', `pk-bulb pk-bulb-${i % 3}${i % 2 ? ' pk-bulb-odd' : ''}`);
+      bulb.style.left = left;
+      bulb.style.top = top;
+      layer.append(bulb);
+    });
+    return layer;
+  }
+
   setStyle(style) {
     this.style = typeof style === 'string' || !style ? getStyle(style) : style;
     if (this.segments.length) this.setSegments(this.segments);
@@ -86,19 +121,24 @@ export class PlinkoBoard {
     this.slots.style.setProperty('--n', n);
     this.slots.classList.toggle('is-narrow', n > 6);
     this.slotEls = segments.map((seg, i) => {
-      const slot = h('div', `pk-slot${seg.available === false ? ' is-off' : ''}`);
+      const slot = h('div', `pk-slot${seg.isPrize ? ' is-prize' : ''}${seg.available === false ? ' is-off' : ''}`);
       slot.style.setProperty('--c', this.colors[i]);
       slot.style.setProperty('--ink', labelColorFor(this.colors[i]).color);
+      // Every slot gets the same round badge: the gift's picture, else its first letter.
+      const glyph = monogram(seg.label);
+      const icon = h('span', 'pk-slot-icon');
       if (seg.image) {
-        const img = h('img', 'pk-slot-img');
+        const img = h('img');
         img.src = seg.image;
         img.alt = '';
-        img.addEventListener('error', () => img.remove());
-        slot.append(img);
-      } else if (seg.isPrize) {
-        slot.append(h('span', 'pk-slot-star', '★'));
+        img.addEventListener('error', () => img.replaceWith(glyph));
+        icon.append(img);
+      } else {
+        icon.textContent = glyph;
       }
-      slot.append(h('span', 'pk-slot-label', seg.label));
+      const label = h('span', 'pk-slot-label');
+      label.append(h('span', '', seg.label));
+      slot.append(icon, label);
       return slot;
     });
     this.slots.replaceChildren(...this.slotEls);
@@ -123,23 +163,31 @@ export class PlinkoBoard {
 
   highlight(index) {
     this.slotEls?.forEach((s, i) => s.classList.toggle('is-win', i === index));
+    this.root.classList.toggle('is-won', index >= 0); // all the bulbs flash together
   }
 
   setClosed(closed) {
     this.stage.classList.toggle('is-closed', closed);
   }
 
-  /** Plan bounce points row by row so the walk ends above the target slot. */
+  /** Plan the peg hit in each row: a random walk of half steps that is steered to end above the target slot. */
   planPath(target) {
     const end = this.slotCenter(target);
-    const start = 30 + Math.random() * 40;
-    const walk = [start];
-    const step = (RIGHT - LEFT) / 16;
-    for (let r = 1; r < ROWS; r++) walk.push(walk[r - 1] + (Math.random() < 0.5 ? -step : step));
-    return walk.map((x, r) => {
-      const drift = (end - walk[ROWS - 1]) * (r / (ROWS - 1));
-      return Math.max(LEFT, Math.min(RIGHT - 1, x + drift));
-    });
+    // Each remaining row can move the ball HALF closer; the last fall into the slot covers up to HALF more.
+    const inReach = (x, rowsLeft) => Math.abs(end - x) <= (rowsLeft + 1) * HALF;
+    const top = Array.from({ length: pegCols(0) }, (_, c) => pegX(0, c));
+    const starts = top.filter((x) => inReach(x, ROWS - 1));
+    let x = starts.length
+      ? starts[Math.floor(Math.random() * starts.length)]
+      : top.reduce((a, b) => (Math.abs(end - b) < Math.abs(end - a) ? b : a)); // edge slot: start nearest
+    const path = [x];
+    for (let r = 1; r < ROWS; r++) {
+      let dir = Math.random() < 0.5 ? -1 : 1;
+      if (!inReach(x + dir * HALF, ROWS - 1 - r)) dir = Math.sign(end - x) || dir; // steer back on course
+      x += dir * HALF;
+      path.push(x);
+    }
+    return path;
   }
 
   animate(duration, fn) {

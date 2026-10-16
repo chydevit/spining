@@ -286,7 +286,13 @@ body {
 }
 .chart .hit {
   fill: transparent;
-  cursor: default;
+  cursor: pointer; /* click a day to filter Recent spins */
+}
+.chart .col.is-selected .bar {
+  fill: var(--blue);
+}
+.chart .col.is-selected .hit {
+  fill: rgba(25, 178, 255, 0.08);
 }
 .chart .hit:hover + .bar,
 .chart .col.is-active .bar {
@@ -413,6 +419,44 @@ body {
   justify-content: space-between;
   gap: 12px;
   border-color: #fecdca;
+}
+.day-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-2, #f3f9f9);
+  border: 1px solid var(--line);
+}
+.day-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.day-picker .input {
+  width: auto;
+  min-height: 36px;
+  padding: 6px 10px;
+}
+.day-step {
+  min-width: 36px;
+  padding-inline: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.day-summary {
+  flex: 1 1 200px;
+  margin: 0;
+  font-weight: 600;
+}
+.day-summary:empty {
+  display: none;
+}
+#delete-day {
+  margin-left: auto;
 }
 .danger-outline {
   color: var(--danger);

@@ -31,6 +31,12 @@ function contrast(a, b) {
 }
 
 /** Choose readable label colour for a segment fill. */
+/** First letter of an outcome's name, shown when a gift has no picture ("Tote Bag" → "T"). */
+export function monogram(label) {
+  const ch = String(label ?? '').trim().match(/\p{L}|\p{N}/u);
+  return ch ? ch[0].toLocaleUpperCase() : '•';
+}
+
 export function labelColorFor(fill) {
   const white = contrast(fill, '#FFFFFF');
   const ink = contrast(fill, INK);

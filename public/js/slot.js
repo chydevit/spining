@@ -1,7 +1,7 @@
 // Arcade slot machine renderer — an alternative to the wheel (style kind "slot").
 // Same interface as Wheel: setSegments, setStyle, spinTo, highlight, setClosed.
 // The server still decides the outcome; all three reels simply stop on it.
-import { labelColorFor } from './wheel.js';
+import { labelColorFor, monogram } from './wheel.js';
 import { getStyle, resolveColors } from './styles.js';
 
 const LOOPS = 8; // how many times each reel repeats the symbols
@@ -42,7 +42,10 @@ export class SlotMachine {
     this.root = h('div', 'slot');
     this.root.setAttribute('role', 'img');
     const sign = h('div', 'slot-sign');
-    sign.append(h('span', 'slot-star slot-star-l', '✦'), h('span', 'slot-sign-small', 'PharmKulen'), h('span', 'slot-sign-text', 'LUCKY SPIN'), h('span', 'slot-star slot-star-r', '✦'));
+    const logo = h('img', 'slot-sign-logo');
+    logo.src = '/assets/pharmkulen-icon.png';
+    logo.alt = '';
+    sign.append(logo, h('span', 'slot-sign-text', 'Lucky Spin'));
 
     const cabinet = h('div', 'slot-cabinet');
     const window_ = h('div', 'slot-window');
@@ -130,7 +133,7 @@ export class SlotMachine {
             img.alt = '';
             pic.append(img);
           } else {
-            pic.textContent = '★';
+            pic.textContent = monogram(s.label);
             pic.style.color = labelColorFor(color).color;
           }
           g.append(pic, h('span', 'slot-gift-name', s.label));
@@ -157,7 +160,7 @@ export class SlotMachine {
     this.window.classList.toggle('is-win', index >= 0);
     const seg = this.segments[index];
     this.display.classList.toggle('is-prize', !!seg?.isPrize);
-    if (seg) this.setDisplay(seg.isPrize ? '★ WINNER! ★' : seg.label.toUpperCase());
+    if (seg) this.setDisplay(seg.isPrize ? 'YOU WON' : seg.label.toUpperCase());
     else if (!this.spinning) this.setDisplay(this.closed ? 'CLOSED' : 'PRESS SPIN');
   }
 

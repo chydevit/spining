@@ -1,9 +1,10 @@
-// Shows the wheel, slot machine, capsule machine or drop board, depending on the chosen style,
+// Shows the wheel, slot machine, capsule machine, drop board or claw machine, depending on the chosen style,
 // behind one interface. Switching styles swaps the renderer when needed.
 import { Wheel } from './wheel.js';
 import { SlotMachine } from './slot.js';
 import { CapsuleMachine } from './capsule.js';
 import { PlinkoBoard } from './plinko.js';
+import { ClawMachine } from './claw.js';
 import { getStyle } from './styles.js';
 
 const kindOf = (style) => style.kind ?? 'wheel';
@@ -18,8 +19,8 @@ export class Spinner {
 
   build(style) {
     this.container.replaceChildren();
-    this.container.classList.remove('wheel-stage', 'slot-stage', 'capsule-stage', 'plinko-stage', 'is-spinning', 'is-closed');
-    const Impl = { slot: SlotMachine, capsule: CapsuleMachine, plinko: PlinkoBoard }[kindOf(style)] ?? Wheel;
+    this.container.classList.remove('wheel-stage', 'slot-stage', 'capsule-stage', 'plinko-stage', 'claw-stage', 'is-spinning', 'is-closed');
+    const Impl = { slot: SlotMachine, capsule: CapsuleMachine, plinko: PlinkoBoard, claw: ClawMachine }[kindOf(style)] ?? Wheel;
     this.impl = new Impl(this.container, { ...this.opts, style: style.id });
     this.kind = kindOf(style);
     this.impl.setClosed(this.closed);

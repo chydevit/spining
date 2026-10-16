@@ -126,17 +126,50 @@ html[data-theme='dark'] .icon-sun {
   flex-direction: column;
   gap: 12px;
   padding: 20px 24px 28px;
-  background:
-    radial-gradient(60% 55% at 50% 52%, rgba(68, 228, 188, 0.14), transparent 70%),
-    radial-gradient(40% 40% at 15% 10%, rgba(25, 178, 255, 0.08), transparent 70%),
-    linear-gradient(180deg, #ffffff 0%, var(--surface-2) 100%);
+  --art: rgba(6, 117, 126, 0.06); /* pharmacy line art: pattern */
+  --art-scene: rgba(6, 117, 126, 0.13); /* pharmacy line art: street scene */
+  background: #f5fafa;
   outline: none;
   overflow: hidden;
 }
 html[data-theme='dark'] .stage {
-  background:
-    radial-gradient(60% 55% at 50% 52%, rgba(5, 143, 154, 0.35), transparent 70%),
-    linear-gradient(180deg, #0b2a2f 0%, #061a1d 100%);
+  --art: rgba(68, 228, 188, 0.06);
+  --art-scene: rgba(68, 228, 188, 0.12);
+  background: #0a2226;
+}
+/* Background illustration: scattered pharmacy objects, and a street with the pharmacy
+   and medicine deliveries along the bottom. Drawn as masks so they take the theme colour. */
+.stage::before,
+.stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.stage::before {
+  background: var(--art);
+  -webkit-mask: url('../assets/bg-pharmacy-pattern.svg') 0 0 / 360px 360px repeat;
+  mask: url('../assets/bg-pharmacy-pattern.svg') 0 0 / 360px 360px repeat;
+  /* fade out towards the bottom, where the street scene takes over */
+  -webkit-mask-image: url('../assets/bg-pharmacy-pattern.svg'), linear-gradient(#000 40%, transparent 85%);
+  -webkit-mask-size: 360px 360px, 100% 100%;
+  -webkit-mask-repeat: repeat, no-repeat;
+  -webkit-mask-composite: source-in;
+  mask-image: url('../assets/bg-pharmacy-pattern.svg'), linear-gradient(#000 40%, transparent 85%);
+  mask-size: 360px 360px, 100% 100%;
+  mask-repeat: repeat, no-repeat;
+  mask-composite: intersect;
+}
+.stage::after {
+  background: var(--art-scene);
+  -webkit-mask: url('../assets/bg-pharmacy-scene.svg') center bottom / max(1400px, 100%) auto no-repeat;
+  mask: url('../assets/bg-pharmacy-scene.svg') center bottom / max(1400px, 100%) auto no-repeat;
+}
+.stage > .stage-top,
+.stage > .wheel-area,
+.stage > .spin-controls {
+  position: relative;
+  z-index: 1;
 }
 .stage:fullscreen {
   gap: 18px;
@@ -167,13 +200,10 @@ html[data-theme='dark'] .stage {
   font-weight: 900;
   letter-spacing: -0.02em;
   line-height: 1.05;
-  background: linear-gradient(100deg, var(--teal-700) 10%, var(--teal) 45%, var(--blue) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--teal-700);
 }
 html[data-theme='dark'] .title {
-  background-image: linear-gradient(100deg, var(--turquoise) 10%, var(--sky) 60%, var(--blue) 100%);
+  color: var(--turquoise);
 }
 .tagline {
   margin-top: 4px;
@@ -201,7 +231,7 @@ html[data-theme='dark'] .title {
     width: min(100%, 720px, max(300px, calc((100svh - var(--topbar-h) - 250px) / var(--ar))));
   }
 }
-.wheel-wrap:has(.slot-stage, .capsule-stage, .plinko-stage) .wheel-glow {
+.wheel-wrap:has(.slot-stage, .capsule-stage, .plinko-stage, .claw-stage) .wheel-glow {
   inset: 10% 0;
   border-radius: 40%;
 }
@@ -212,18 +242,7 @@ html[data-theme='dark'] .title {
   margin-top: 10px;
 }
 .wheel-glow {
-  position: absolute;
-  inset: 6%;
-  border-radius: 50%;
-  background: conic-gradient(from 0deg, var(--blue), var(--turquoise), var(--green), var(--sky), var(--blue));
-  filter: blur(48px);
-  opacity: 0.22;
-  z-index: 0;
-}
-/* Styles can tint the glow behind the wheel. */
-.stage[style*='--wheel-glow'] .wheel-glow {
-  background: radial-gradient(circle, var(--wheel-glow) 0%, transparent 72%);
-  opacity: 0.35;
+  display: none; /* no blurred colour blob behind the machines: they stand on their own */
 }
 #wheel {
   position: relative;
@@ -231,9 +250,6 @@ html[data-theme='dark'] .title {
 }
 .stage.can-spin #wheel {
   cursor: pointer;
-}
-.stage.can-spin #wheel:hover .wheel-svg {
-  filter: drop-shadow(0 0 18px rgba(68, 228, 188, 0.35));
 }
 .closed-overlay {
   position: absolute;
@@ -281,17 +297,16 @@ html[data-theme='dark'] .title {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  min-width: 220px;
-  min-height: 62px;
-  padding: 12px 40px;
+  min-width: 200px;
+  min-height: 56px;
+  padding: 12px 36px;
   border: 0;
-  border-radius: 999px;
-  font-size: 22px;
-  font-weight: 900;
-  letter-spacing: 0.02em;
+  border-radius: 14px;
+  font-size: 20px;
+  font-weight: 800;
   color: #fff;
-  background: linear-gradient(135deg, var(--teal-600) 0%, #0583a0 50%, #0b7fc0 100%);
-  box-shadow: 0 10px 24px rgba(5, 117, 126, 0.35), inset 0 -3px 0 rgba(5, 59, 64, 0.25);
+  background: var(--teal-600);
+  box-shadow: 0 3px 0 var(--teal-700), 0 6px 14px rgba(5, 59, 64, 0.16);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
@@ -300,29 +315,14 @@ html[data-theme='dark'] .title {
   height: 24px;
 }
 .spin-btn:not(:disabled):hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(5, 117, 126, 0.4), inset 0 -3px 0 rgba(5, 59, 64, 0.25);
+  background: var(--teal-700);
 }
 .spin-btn:not(:disabled):active {
-  transform: translateY(1px) scale(0.99);
-}
-.spin-btn:not(:disabled)::after {
-  content: '';
-  position: absolute;
-  inset: -6px;
-  border-radius: inherit;
-  border: 3px solid var(--turquoise);
-  opacity: 0;
-  pointer-events: none;
-  animation: pulse 2.4s ease-out infinite;
-}
-@keyframes pulse {
-  0% { opacity: 0.7; transform: scale(0.96); }
-  70%, 100% { opacity: 0; transform: scale(1.1); }
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--teal-700), 0 3px 8px rgba(5, 59, 64, 0.16);
 }
 .spin-btn:focus-visible {
   box-shadow: var(--focus);
-  border-radius: 999px;
 }
 .spin-btn:disabled {
   cursor: not-allowed;
@@ -922,6 +922,36 @@ html[data-theme='dark'] .spin-meta.is-error {
   height: 124px;
   box-shadow: 0 0 0 4px #f7d27a, 0 12px 28px rgba(169, 110, 8, 0.45);
 }
+/* "Thank you!" sticker: crying face + PharmKulen logo, stuck beside the result picture */
+.rd-sticker {
+  display: none;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 92px;
+  padding: 6px 6px 7px;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(5, 59, 64, 0.08), 0 8px 16px rgba(5, 59, 64, 0.25);
+  justify-items: center;
+  gap: 2px;
+  transform: translateY(-50%) rotate(9deg);
+}
+.result-dialog.is-neutral .rd-sticker { display: grid; }
+.result-dialog[open].is-neutral .rd-sticker {
+  animation: sticker-slap 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) 0.5s both;
+}
+@keyframes sticker-slap {
+  from { transform: translateY(-50%) rotate(30deg) scale(1.8); opacity: 0; }
+}
+.rd-cry { width: 58px; height: 58px; }
+.rd-tear { animation: tear-drop 1.2s ease-in infinite; }
+.rd-tear-2 { animation-delay: 0.6s; }
+@keyframes tear-drop {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(20px); opacity: 0; }
+}
+.rd-sticker img { width: 78px; height: auto; }
 .result-badge.latest-dot.has-image,
 .dot.has-image,
 .result-badge.has-image {
@@ -1085,6 +1115,9 @@ html[data-theme='dark'] .spin-meta.is-error {
   .rd-banner { margin-top: 24px !important; padding: 6px 20px 8px !important; }
   .rd-banner h2 { font-size: 18px !important; }
   .rd-scene { height: 92px !important; margin-top: 6px; }
+  .rd-sticker { width: 62px !important; }
+  .rd-cry { width: 34px !important; height: 34px !important; }
+  .rd-sticker img { width: 54px !important; }
   .result-badge, .result-dialog.is-gift .result-badge { width: 68px !important; height: 68px !important; font-size: 28px !important; border-width: 4px; }
   .result-kicker { margin-top: 2px; font-size: 11px; }
   .result-title { font-size: 21px !important; }
@@ -1100,6 +1133,9 @@ html[data-theme='dark'] .spin-meta.is-error {
   .rd-banner { margin-top: 30px; padding: 8px 24px 10px; }
   .rd-banner h2 { font-size: 20px; }
   .rd-scene { height: 120px; }
+  .rd-sticker { width: 74px; padding: 4px 4px 5px; border-radius: 14px; }
+  .rd-cry { width: 44px; height: 44px; }
+  .rd-sticker img { width: 64px; }
   .result-badge, .result-dialog.is-gift .result-badge { width: 86px; height: 86px; font-size: 36px; }
   .result-title { font-size: 23px; }
   .claim-note { display: none; }
