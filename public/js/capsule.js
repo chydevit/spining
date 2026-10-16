@@ -97,6 +97,7 @@ export class CapsuleMachine {
         c.style.setProperty('--c', this.colors[idx]);
         c.style.setProperty('--r', `${Math.round((rand() - 0.5) * 140)}deg`);
         c.style.setProperty('--d', `${(rand() * 0.25).toFixed(2)}s`);
+        c.style.zIndex = 20 - row; // lower rows sit in front
         caps.push(c);
       }
     }

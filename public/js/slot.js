@@ -55,9 +55,16 @@ export class SlotMachine {
       return { reel, strip, order: [] };
     });
     window_.append(h('div', 'slot-payline'), h('span', 'slot-arrow slot-arrow-l'), h('span', 'slot-arrow slot-arrow-r'));
-    const lamp = h('div', 'slot-lamp', 'SPIN');
-    lamp.setAttribute('aria-hidden', 'true');
-    cabinet.append(h('span', 'slot-arm slot-arm-l'), h('span', 'slot-arm slot-arm-r'), window_, lamp);
+    // LED status display (not a button: the real Spin button sits below the machine).
+    this.display = h('div', 'slot-display');
+    this.display.setAttribute('aria-hidden', 'true');
+    this.displayText = h('span', 'slot-display-text', 'PRESS SPIN');
+    this.display.append(this.displayText);
+    const lever = h('span', 'slot-lever');
+    lever.setAttribute('aria-hidden', 'true');
+    lever.append(h('span', 'slot-lever-base'), h('span', 'slot-lever-rod'), h('span', 'slot-lever-knob'));
+    this.lever = lever;
+    cabinet.append(lever, window_, this.display);
 
     this.showcase = h('div', 'slot-base');
     this.root.append(sign, cabinet, this.showcase);
@@ -148,10 +155,20 @@ export class SlotMachine {
 
   highlight(index) {
     this.window.classList.toggle('is-win', index >= 0);
+    const seg = this.segments[index];
+    this.display.classList.toggle('is-prize', !!seg?.isPrize);
+    if (seg) this.setDisplay(seg.isPrize ? '★ WINNER! ★' : seg.label.toUpperCase());
+    else if (!this.spinning) this.setDisplay(this.closed ? 'CLOSED' : 'PRESS SPIN');
+  }
+
+  setDisplay(text) {
+    this.displayText.textContent = text;
   }
 
   setClosed(closed) {
+    this.closed = closed;
     this.stage.classList.toggle('is-closed', closed);
+    if (!this.spinning && !this.window.classList.contains('is-win')) this.setDisplay(closed ? 'CLOSED' : 'PRESS SPIN');
   }
 
   spinTo(index, { duration = 2600, reducedMotion = false } = {}) {
@@ -160,6 +177,10 @@ export class SlotMachine {
     this.highlight(-1);
     this.spinning = true;
     this.stage.classList.add('is-spinning');
+    this.setDisplay('GOOD LUCK!');
+    this.lever.classList.remove('pull');
+    void this.lever.offsetWidth; // restart the pull animation
+    this.lever.classList.add('pull');
 
     const plans = this.reels.map((r, ri) => {
       // Rewind into the 2nd loop (looks identical) so there is room to spin forward.

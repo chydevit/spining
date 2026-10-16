@@ -206,7 +206,10 @@ html[data-theme='dark'] .title {
   border-radius: 40%;
 }
 .stage:fullscreen .wheel-wrap {
-  width: min(100%, 980px, max(280px, calc((100svh - 250px) / var(--ar))));
+  width: min(100%, 980px, max(280px, calc((100svh - 280px) / var(--ar))));
+}
+.stage:fullscreen .spin-controls {
+  margin-top: 10px;
 }
 .wheel-glow {
   position: absolute;

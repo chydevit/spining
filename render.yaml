@@ -1,4 +1,6 @@
-# Render Blueprint — creates the web service and its PostgreSQL database together.
+# Render Blueprint — creates the web service. It uses an existing Render PostgreSQL database
+# (spining_pk): paste that database's *Internal* Database URL as DATABASE_URL when Render asks.
+# The web service must be in the same region as the database, or the internal URL won't resolve.
 # In Render: New → Blueprint → pick this repository → Apply.
 #
 # Plans: "free" works for trying it out, but
@@ -15,10 +17,8 @@ services:
     healthCheckPath: /healthz
     autoDeploy: true
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: pharmkulen-spin-db
-          property: connectionString
+      - key: DATABASE_URL # Internal Database URL of the existing database — kept out of git
+        sync: false
       - key: ADMIN_PASSWORD # only used the very first time, to create the admin account
         sync: false
       - key: COOKIE_SECURE
@@ -28,11 +28,3 @@ services:
       - key: TZ
         value: Asia/Phnom_Penh
 
-databases:
-  - name: pharmkulen-spin-db
-    region: singapore
-    plan: free
-    databaseName: pharmkulen_spin
-    user: pharmkulen
-    # Outside connections need Render's generated password. After copying your local data
-    # (scripts/migrate-to-postgres.js), you can block them entirely with:  ipAllowList: []

@@ -561,17 +561,57 @@ textarea {
   border: 1cqw solid #ffffff;
   box-shadow: 0 2cqw 5cqw rgba(5, 59, 64, 0.22), inset 0 -1.2cqw 0 rgba(5, 143, 154, 0.12);
 }
-.slot-arm {
+/* Pull lever on the right side; it pulls down when the reels start. */
+.slot-lever {
   position: absolute;
-  top: 16%;
-  width: 6cqw;
+  top: 6%;
+  right: -6.4cqw;
+  width: 6.4cqw;
   height: 46%;
-  border-radius: 3cqw;
-  background: linear-gradient(90deg, #cfe3e6, #ffffff 45%, #b9d3d7);
-  box-shadow: 0 1cqw 2cqw rgba(5, 59, 64, 0.18);
+  pointer-events: none;
 }
-.slot-arm-l { left: -4.6cqw; }
-.slot-arm-r { right: -4.6cqw; }
+.slot-lever-base {
+  position: absolute;
+  bottom: 0;
+  left: -0.6cqw;
+  width: 3.6cqw;
+  height: 11cqw;
+  border-radius: 0 1.6cqw 1.6cqw 0;
+  background: linear-gradient(90deg, #b9d3d7, #ffffff 45%, #cfe3e6);
+  box-shadow: 0 1cqw 2cqw rgba(5, 59, 64, 0.2);
+}
+.slot-lever-rod {
+  position: absolute;
+  left: 1.5cqw;
+  bottom: 5.5cqw;
+  width: 1.4cqw;
+  height: calc(100% - 8cqw);
+  border-radius: 0.7cqw;
+  background: linear-gradient(90deg, #8fa9ae, #f4fbfc 45%, #9fb8bc);
+  transform-origin: bottom center;
+}
+.slot-lever-knob {
+  position: absolute;
+  top: 0;
+  left: -0.6cqw;
+  width: 5.6cqw;
+  height: 5.6cqw;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffb3a8 0 12%, #ef4b3f 40%, #a3141b 100%);
+  box-shadow: 0 0.8cqw 1.6cqw rgba(163, 20, 27, 0.4);
+}
+.slot-lever.pull .slot-lever-rod {
+  animation: lever-rod 0.75s ease-in-out;
+}
+.slot-lever.pull .slot-lever-knob {
+  animation: lever-knob 0.75s ease-in-out;
+}
+@keyframes lever-rod {
+  40%, 55% { transform: scaleY(0.12); }
+}
+@keyframes lever-knob {
+  40%, 55% { top: calc(100% - 10cqw); }
+}
 
 .slot-window {
   position: relative;
@@ -698,24 +738,50 @@ textarea {
 .slot-arrow-l { left: -1.2cqw; border-left: 2.6cqw solid var(--neon); }
 .slot-arrow-r { right: -1.2cqw; border-right: 2.6cqw solid var(--neon); }
 
-.slot-lamp {
-  min-width: 46%;
-  padding: 2.2cqw 6cqw;
-  border-radius: 3.4cqw;
-  font-size: 5.6cqw;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  text-align: center;
-  color: #ffffff;
-  text-shadow: 0 0.4cqw 0 rgba(5, 59, 64, 0.35);
-  background: linear-gradient(180deg, #7ff0d6 0%, #2fd3c1 45%, #11a7b4 100%);
-  box-shadow: 0 1.2cqw 0 #0b7f8a, 0 2.4cqw 4cqw rgba(17, 167, 180, 0.45), inset 0 0.8cqw 0 rgba(255, 255, 255, 0.55);
-  cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+/* LED status display: PRESS SPIN → GOOD LUCK! → the result. */
+.slot-display {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 64%;
+  max-width: 100%;
+  padding: 1.8cqw 4cqw;
+  border-radius: 2.6cqw;
+  background: #06121f;
+  box-shadow: inset 0 0 0 0.5cqw #1d3a55, inset 0 0.8cqw 2cqw rgba(0, 0, 0, 0.6), 0 0.8cqw 0 #c9e6e3;
+  overflow: hidden;
 }
-.is-spinning .slot-lamp {
-  transform: translateY(1cqw);
-  box-shadow: 0 0.2cqw 0 #0b7f8a, 0 1cqw 2cqw rgba(17, 167, 180, 0.35), inset 0 0.8cqw 0 rgba(255, 255, 255, 0.55);
+.slot-display::after {
+  /* dot-matrix grid */
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle, transparent 0 0.35cqw, rgba(6, 18, 31, 0.55) 0.5cqw) 0 0 / 0.9cqw 0.9cqw;
+}
+.slot-display-text {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 4.6cqw;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.12em;
+  color: #6ff5d2;
+  text-shadow: 0 0 0.8cqw rgba(68, 228, 188, 0.9), 0 0 2cqw rgba(68, 228, 188, 0.5);
+}
+.is-spinning .slot-display-text {
+  animation: led-blink 0.5s steps(2) infinite;
+}
+@keyframes led-blink {
+  50% { opacity: 0.35; }
+}
+.slot-display.is-prize .slot-display-text {
+  color: #ffe08a;
+  text-shadow: 0 0 0.8cqw rgba(247, 210, 122, 0.95), 0 0 2.4cqw rgba(247, 180, 60, 0.6);
+  animation: led-blink 0.6s steps(2) 4;
 }
 
 /* Gift panel with marquee lights */
@@ -903,23 +969,26 @@ textarea {
   aspect-ratio: 1;
   border-radius: 50%;
   transform: rotate(var(--r));
-  background:
-    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.85) 0 8%, transparent 9%),
-    linear-gradient(180deg, var(--c) 0 47%, #0b2a2f 47% 53%, #ffffff 53% 100%);
-  box-shadow: inset 0 -0.8cqw 1.4cqw rgba(0, 0, 0, 0.18), 0 0.4cqw 0.8cqw rgba(5, 59, 64, 0.2);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--c) 28%, #ffffff) 0 47%,
+    color-mix(in srgb, var(--c) 60%, #ffffff) 47% 53%,
+    var(--c) 53% 100%);
+  box-shadow:
+    inset -0.9cqw -1.1cqw 1.6cqw rgba(3, 40, 44, 0.3),
+    inset 0.5cqw 0.6cqw 1cqw rgba(255, 255, 255, 0.7),
+    0 0.5cqw 0.9cqw rgba(5, 59, 64, 0.25);
 }
 .cap::after {
-  /* button in the middle band */
+  /* glossy highlight on the clear top */
   content: '';
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 26%;
-  height: 26%;
+  left: 18%;
+  top: 12%;
+  width: 34%;
+  height: 16%;
   border-radius: 50%;
-  transform: translate(-50%, -50%);
-  background: #ffffff;
-  box-shadow: 0 0 0 0.45cqw #0b2a2f;
+  transform: rotate(-28deg);
+  background: rgba(255, 255, 255, 0.85);
 }
 .is-spinning .cap {
   animation: tumble 0.32s ease-in-out var(--d) infinite alternate;
@@ -932,9 +1001,13 @@ textarea {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  border-radius: inherit;
   background:
-    linear-gradient(115deg, rgba(255, 255, 255, 0.55) 0 8%, transparent 8% 14%, rgba(255, 255, 255, 0.3) 14% 17%, transparent 17%),
-    radial-gradient(120% 70% at 50% 0%, rgba(255, 255, 255, 0.35), transparent 60%);
+    radial-gradient(60% 90% at 10% 40%, rgba(255, 255, 255, 0.5) 0 18%, transparent 19%),
+    radial-gradient(40% 70% at 94% 55%, rgba(255, 255, 255, 0.28) 0 12%, transparent 13%),
+    radial-gradient(120% 60% at 50% 0%, rgba(255, 255, 255, 0.4), transparent 60%),
+    linear-gradient(180deg, transparent 70%, rgba(6, 117, 126, 0.12));
+  box-shadow: inset 0 0 2.4cqw rgba(6, 117, 126, 0.25);
 }
 
 /* Result popping out of the capsule */
@@ -1015,6 +1088,20 @@ textarea {
   border-radius: 2cqw;
   background: linear-gradient(180deg, #44e4bc, #11bd9b);
 }
+.cap-base::after {
+  /* plinth / feet */
+  content: '';
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: -2.4cqw;
+  height: 3.4cqw;
+  z-index: -1;
+  border-radius: 0 0 2.4cqw 2.4cqw;
+  background:
+    linear-gradient(90deg, transparent 18%, #04484e 18% 82%, transparent 82%) bottom / 100% 40% no-repeat,
+    linear-gradient(180deg, #054f56, #03393e);
+}
 .cap-chute {
   position: relative;
   height: 22cqw;
@@ -1023,23 +1110,46 @@ textarea {
   box-shadow: inset 0 0 0 1cqw #0a9fa9;
   overflow: hidden;
 }
+.cap-chute::before {
+  content: 'PRIZE';
+  position: absolute;
+  top: 0.9cqw;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  font-size: 2.2cqw;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-align: center;
+  color: #bff7ea;
+}
 .cap-chute-hole {
   position: absolute;
-  inset: 2.6cqw 3cqw 3cqw;
+  inset: 4.2cqw 3cqw 3cqw;
   border-radius: 3cqw 3cqw 2cqw 2cqw;
   background: radial-gradient(120% 90% at 50% 10%, #021e22, #053b40);
 }
 .cap-chute-flap {
   position: absolute;
+  z-index: 2;
   left: 3cqw;
   right: 3cqw;
-  top: 2.6cqw;
-  height: 6cqw;
+  top: 4.2cqw;
+  height: 7cqw;
   border-radius: 3cqw 3cqw 0 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.08));
+  border-bottom: 0.6cqw solid rgba(191, 247, 234, 0.55);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1));
+  transform-origin: top center;
+}
+.cap-drop.dropping ~ .cap-chute-flap {
+  animation: flap 0.75s ease-out;
+}
+@keyframes flap {
+  40% { transform: perspective(30cqw) rotateX(-50deg); }
 }
 .cap-drop {
   position: absolute;
+  z-index: 3;
   left: 50%;
   bottom: 3.6cqw;
   width: 13cqw;
@@ -1058,14 +1168,17 @@ textarea {
 .cap-drop-top {
   top: 0;
   border-radius: 6.5cqw 6.5cqw 0 0;
-  background: radial-gradient(circle at 32% 40%, rgba(255, 255, 255, 0.8) 0 12%, transparent 13%), var(--c);
-  border-bottom: 0.6cqw solid #0b2a2f;
+  background:
+    radial-gradient(30% 22% at 34% 38%, rgba(255, 255, 255, 0.9) 0 60%, transparent 62%),
+    color-mix(in srgb, var(--c) 28%, #ffffff);
+  border-bottom: 0.6cqw solid color-mix(in srgb, var(--c) 60%, #ffffff);
   transform-origin: 10% 100%;
 }
 .cap-drop-bottom {
   bottom: 0;
   border-radius: 0 0 6.5cqw 6.5cqw;
-  background: #ffffff;
+  background: var(--c);
+  box-shadow: inset -0.8cqw -1cqw 1.4cqw rgba(3, 40, 44, 0.3);
 }
 .cap-drop.dropping {
   animation: cap-drop 0.75s cubic-bezier(0.3, 0, 0.6, 1) forwards;
@@ -1102,14 +1215,44 @@ textarea {
 }
 .cap-coin {
   position: absolute;
-  right: 3.4cqw;
+  right: 2.6cqw;
   top: 50%;
-  width: 2cqw;
-  height: 8cqw;
-  border-radius: 1cqw;
+  width: 4.4cqw;
+  height: 11cqw;
+  border-radius: 1.4cqw;
   transform: translateY(-50%);
-  background: #0b2a2f;
-  box-shadow: 0 0 0 0.8cqw #c9e6e8;
+  background:
+    linear-gradient(#0b2a2f, #0b2a2f) center / 1.2cqw 6.4cqw no-repeat,
+    linear-gradient(180deg, #e9f3f4, #b8d3d6);
+  box-shadow: inset 0 0 0 0.3cqw rgba(5, 59, 64, 0.25), 0 0.4cqw 0.6cqw rgba(3, 40, 44, 0.2);
+}
+.cap-plate::before {
+  /* "turn" ring with an arrow around the knob */
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: calc(50% - 2.5cqw);
+  width: 19.5cqw;
+  height: 19.5cqw;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 0.6cqw dashed rgba(5, 143, 154, 0.45);
+}
+.cap-plate::after {
+  content: 'TURN ↻';
+  position: absolute;
+  left: 2cqw;
+  bottom: 1cqw;
+  font-size: 2cqw;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #058f9a;
+}
+.is-spinning .cap-plate::before {
+  animation: turn-ring 1.5s linear;
+}
+@keyframes turn-ring {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 .cap-knob {
   position: relative;

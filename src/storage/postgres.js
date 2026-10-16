@@ -68,6 +68,16 @@ export class PgStore {
     } catch {
       throw new Error('DATABASE_URL is set but the "pg" package is missing. Run `npm install`.');
     }
+    // A malformed URL never gets better by retrying: fail at once, without printing the password.
+    try {
+      const u = new URL(this.url);
+      if (!/^postgres(ql)?:$/.test(u.protocol) || !u.hostname) throw new Error();
+    } catch {
+      throw new Error(
+        'DATABASE_URL is not a valid PostgreSQL URL. Expected postgresql://USER:PASSWORD@HOST/DATABASE ' +
+        '(no quotes, spaces or "DATABASE_URL=" in the value). Copy it again from the database page in Render.'
+      );
+    }
     const makePool = (ssl) => {
       const pool = new pg.Pool({ connectionString: this.url, ssl, max: 5, idleTimeoutMillis: 30_000 });
       pool.on('error', (err) => this.log('[db] idle client error:', err.message));

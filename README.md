@@ -46,7 +46,7 @@ The repo contains everything Render needs:
 | File | Purpose |
 |---|---|
 | `Dockerfile` | Production image: Node 22 on Alpine, runs as a non-root user, health check on `/healthz` |
-| `render.yaml` | Blueprint that creates the web service **and** a PostgreSQL database, already wired together |
+| `render.yaml` | Blueprint that creates the web service and connects it to an existing Render PostgreSQL database |
 | `docker-compose.yml` | The same setup on your own computer: `docker compose up --build`, then http://localhost:3000 |
 | `scripts/migrate-to-postgres.js` | Copies your local wheel, admin password, spins and images into a database |
 
@@ -54,7 +54,7 @@ The repo contains everything Render needs:
 
 **Steps**
 1. Put the project in a **private** GitHub or GitLab repository. `data/` and `node_modules/` are git-ignored, so no customer data is uploaded.
-2. In Render: **New → Blueprint**, choose the repo and click **Apply**. When asked, enter `ADMIN_PASSWORD`; it's only used the first time, to create the admin account.
+2. In Render: **New → Blueprint**, choose the repo and click **Apply**. When asked, enter `DATABASE_URL` (the database's **Internal Database URL**; the web service must be in the same region as the database) and `ADMIN_PASSWORD` (only used the first time, to create the admin account).
 3. *(Optional)* To bring over your current wheel, images, password and spins, copy the database's **External Database URL** from Render and run this on your computer:
    ```bash
    DATABASE_URL='postgres://…external URL…' node scripts/migrate-to-postgres.js --force
