@@ -29,12 +29,12 @@ export function generatePassword() {
 }
 
 /**
- * Admin sessions. Tokens live only in the user's HttpOnly cookie; we keep a SHA-256
- * hash of each token. With a `persist` backend (Postgres) sessions survive restarts.
+ * Sign-in sessions. Tokens live only in the user's HttpOnly cookie; we keep a SHA-256 hash of
+ * each token and the user it belongs to. With a `persist` backend (Postgres) they survive restarts.
  */
 export class SessionManager {
   constructor(persist = null, log = console.error) {
-    this.sessions = new Map(); // tokenHash -> { expiresAt, savedAt }
+    this.sessions = new Map(); // tokenHash -> { expiresAt, savedAt, userId }
     this.persist = persist;
     this.log = log;
   }
@@ -44,8 +44,8 @@ export class SessionManager {
   }
 
   load(list = []) {
-    for (const { hash, expiresAt } of list) {
-      if (expiresAt > Date.now()) this.sessions.set(hash, { expiresAt, savedAt: Date.now() });
+    for (const { hash, expiresAt, userId } of list) {
+      if (expiresAt > Date.now() && userId) this.sessions.set(hash, { expiresAt, savedAt: Date.now(), userId });
     }
   }
 
@@ -53,32 +53,33 @@ export class SessionManager {
     promise?.catch?.((err) => this.log('[sessions] could not persist:', err.message));
   }
 
-  create() {
+  create(userId) {
     const token = crypto.randomBytes(32).toString('base64url');
     const hash = SessionManager.hash(token);
     const expiresAt = Date.now() + SESSION_TTL_MS;
-    this.sessions.set(hash, { expiresAt, savedAt: Date.now() });
-    this.background(this.persist?.saveSession(hash, expiresAt));
+    this.sessions.set(hash, { expiresAt, savedAt: Date.now(), userId });
+    this.background(this.persist?.saveSession(hash, expiresAt, userId));
     return token;
   }
 
-  validate(token) {
-    if (!token) return false;
+  /** The signed-in user's id for this token, or null. */
+  userFor(token) {
+    if (!token) return null;
     const hash = SessionManager.hash(token);
     const session = this.sessions.get(hash);
-    if (!session) return false;
+    if (!session) return null;
     if (session.expiresAt < Date.now()) {
       this.sessions.delete(hash);
       this.background(this.persist?.deleteSession(hash));
-      return false;
+      return null;
     }
     // Sliding expiry (written back at most every 15 minutes).
     session.expiresAt = Date.now() + SESSION_TTL_MS;
     if (Date.now() - session.savedAt > 15 * 60 * 1000) {
       session.savedAt = Date.now();
-      this.background(this.persist?.saveSession(hash, session.expiresAt));
+      this.background(this.persist?.saveSession(hash, session.expiresAt, session.userId));
     }
-    return true;
+    return session.userId;
   }
 
   destroy(token) {
@@ -88,9 +89,11 @@ export class SessionManager {
     this.background(this.persist?.deleteSession(hash));
   }
 
-  async destroyAll() {
-    this.sessions.clear();
-    await this.persist?.deleteAllSessions();
+  /** Sign a user out everywhere (e.g. after a password change), optionally keeping one token. */
+  async destroyUser(userId, keepToken = null) {
+    const keep = keepToken ? SessionManager.hash(keepToken) : null;
+    for (const [hash, s] of this.sessions) if (s.userId === userId && hash !== keep) this.sessions.delete(hash);
+    await this.persist?.deleteUserSessions(userId, keep);
   }
 }
 

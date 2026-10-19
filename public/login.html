@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Sign in · Spin</title>
+    <link rel="icon" href="/assets/spin-icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/site.css" />
+  </head>
+  <body>
+    <header class="site-bar">
+      <div class="wrap">
+        <a class="site-logo" href="/"><img src="/assets/spin-icon.svg" alt="" width="38" height="38" />Spin</a>
+      </div>
+    </header>
+    <main class="auth">
+      <div class="card auth-card">
+        <h1 id="auth-title">Welcome back</h1>
+        <div class="auth-switch" role="tablist" aria-label="Sign in or create an account">
+          <button id="tab-login" role="tab" type="button" aria-selected="true" aria-controls="login-form">Sign in</button>
+          <button id="tab-signup" role="tab" type="button" aria-selected="false" aria-controls="signup-form">Create account</button>
+        </div>
+        <div id="auth-notice" class="notice" role="status" hidden></div>
+
+        <form id="login-form" class="form" role="tabpanel" aria-labelledby="tab-login" novalidate>
+          <div class="field">
+            <label for="login-email">Email</label>
+            <input id="login-email" class="input" type="email" autocomplete="email" required />
+          </div>
+          <div class="field">
+            <label for="login-password">Password</label>
+            <input id="login-password" class="input" type="password" autocomplete="current-password" required />
+          </div>
+          <p id="login-error" class="field-error" role="alert"></p>
+          <button id="login-submit" class="btn btn-primary btn-block" type="submit">Sign in</button>
+        </form>
+
+        <form id="signup-form" class="form" role="tabpanel" aria-labelledby="tab-signup" novalidate hidden>
+          <div class="field">
+            <label for="signup-name">Your name</label>
+            <input id="signup-name" class="input" autocomplete="name" maxlength="60" required aria-describedby="signup-name-error" />
+            <p id="signup-name-error" class="field-error" role="alert"></p>
+          </div>
+          <div class="field">
+            <label for="signup-email">Email</label>
+            <input id="signup-email" class="input" type="email" autocomplete="email" maxlength="120" required aria-describedby="signup-email-error" />
+            <p id="signup-email-error" class="field-error" role="alert"></p>
+          </div>
+          <div class="field">
+            <label for="signup-password">Password</label>
+            <input id="signup-password" class="input" type="password" autocomplete="new-password" minlength="8" required aria-describedby="signup-password-hint signup-password-error" />
+            <p id="signup-password-hint" class="hint">At least 8 characters.</p>
+            <p id="signup-password-error" class="field-error" role="alert"></p>
+          </div>
+          <p id="signup-error" class="field-error" role="alert"></p>
+          <button id="signup-submit" class="btn btn-primary btn-block" type="submit">Create account</button>
+          <p class="hint center">Next you'll create your first company and its game.</p>
+        </form>
+      </div>
+    </main>
+    <script type="module" src="/js/login.js"></script>
+  </body>
+</html>

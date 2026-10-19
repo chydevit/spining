@@ -138,6 +138,11 @@ html[data-theme='dark'] .stage {
   mask-repeat: repeat, no-repeat;
   mask-composite: intersect;
 }
+/* The pharmacy artwork is PharmKulen's; other companies get just their own faint icons. */
+html[data-brand-kind='generic'] .stage::before,
+html[data-brand-kind='generic'] .stage::after {
+  display: none;
+}
 .stage::after {
   background: var(--art-scene);
   -webkit-mask: url('../assets/bg-pharmacy-scene.svg') center bottom / max(1200px, 100%) auto no-repeat;

@@ -19,8 +19,10 @@ services:
     envVars:
       - key: DATABASE_URL # Internal Database URL of the existing database — kept out of git
         sync: false
-      - key: ADMIN_PASSWORD # only used the very first time, to create the admin account
+      - key: ADMIN_PASSWORD # only on an EMPTY database: creates the PharmKulen company + owner account
         sync: false
+      # - key: HOME_COMPANY # uncomment to make / open a company's game (e.g. pharmkulen) instead of the landing page
+      #   value: pharmkulen
       - key: COOKIE_SECURE
         value: "1"
       - key: TRUST_PROXY

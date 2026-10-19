@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Spin · PharmKulen</title>
-    <meta name="description" content="Spin the PharmKulen wheel for a little something fun." />
+    <title>Spin</title>
+    <meta name="description" content="Spin the wheel for a little something fun." />
     <meta name="theme-color" content="#058F9A" />
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png" />
     <link rel="apple-touch-icon" href="/assets/icon-180.png" />
@@ -19,7 +19,7 @@
 
     <header class="topbar">
       <a href="/" class="brand">
-        <img src="/assets/pharmkulen-logo.png" alt="PharmKulen" width="725" height="210" data-brand="logo" />
+        <img src="/assets/spin-icon.svg" alt="" width="725" height="210" data-brand="logo" hidden />
       </a>
       <div class="topbar-actions">
         <button id="theme-toggle" class="icon-btn" type="button" aria-pressed="false" aria-label="Dark theme" title="Dark theme">
@@ -98,7 +98,7 @@
           <div id="latest" class="latest"></div>
           <ol id="history" class="history" aria-label="Your spins"></ol>
           <div id="history-empty" class="results-empty">
-            <img src="/assets/pharmkulen-icon.png" alt="" width="64" height="64" data-brand="icon" />
+            <img src="/assets/spin-icon.svg" alt="" width="64" height="64" data-brand="icon" />
             <p class="empty-title">No spins yet</p>
             <p class="empty">Your results and claim codes will appear here.</p>
           </div>
@@ -114,7 +114,7 @@
     </main>
 
     <footer class="site-footer">
-      <p class="copyright">© <span id="year"></span> PharmKulen</p>
+      <p class="copyright">© <span id="year"></span> <span data-company-name></span> · Made with <a href="/">Spin</a></p>
     </footer>
 
     <dialog id="result-dialog" class="result-dialog" aria-labelledby="result-heading result-title" aria-describedby="result-desc">
@@ -160,7 +160,7 @@
               <circle class="rd-tear" cx="20" cy="36" r="3.5" fill="#19B2FF" />
               <circle class="rd-tear rd-tear-2" cx="44" cy="36" r="3.5" fill="#19B2FF" />
             </svg>
-            <img src="/assets/pharmkulen-logo.png" alt="" width="725" height="210" data-brand="logo" />
+            <img src="/assets/spin-icon.svg" alt="" width="725" height="210" data-brand="logo" hidden />
           </div>
         </div>
         <p id="result-kicker" class="result-kicker">You won</p>
@@ -172,7 +172,7 @@
             <output id="claim-code" class="claim-code"></output>
             <button id="copy-code" class="btn btn-secondary btn-sm" type="button">Copy</button>
           </div>
-          <p class="claim-note">Show this code to a PharmKulen team member. Gifts are while supplies last and have no cash value.</p>
+          <p class="claim-note">Show this code to a member of the <span data-company-name></span> team. Gifts are while supplies last and have no cash value.</p>
         </div>
         <div class="result-actions">
           <button id="spin-again" class="rd-pill" type="button">Spin again</button>
@@ -184,7 +184,7 @@
     <dialog id="details-dialog" class="details-dialog" aria-labelledby="details-title" aria-describedby="details-intro">
       <form id="details-form" novalidate>
         <div class="details-head">
-          <img src="/assets/pharmkulen-icon.png" alt="" width="56" height="56" data-brand="icon" />
+          <img src="/assets/spin-icon.svg" alt="" width="56" height="56" data-brand="icon" />
           <div>
             <h2 id="details-title">Before you spin</h2>
             <p id="details-intro">Tell us who you are so our team can hand over any gift you win.</p>
@@ -200,7 +200,7 @@
           <input id="player-phone-input" class="input" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="e.g. 012 345 678" required aria-describedby="phone-error" />
           <p id="phone-error" class="field-error" role="alert"></p>
         </div>
-        <p class="privacy-note">PharmKulen keeps your name and phone number only to run this game and hand out gifts.</p>
+        <p class="privacy-note"><span data-company-name></span> keeps your name and phone number only to run this game and hand out gifts.</p>
         <p id="details-error" class="field-error" role="alert"></p>
         <div class="details-actions">
           <button value="cancel" class="btn btn-secondary" type="button" id="details-cancel">Cancel</button>

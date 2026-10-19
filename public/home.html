@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Spin · Your own prize-wheel game</title>
+    <meta name="description" content="Create a free spin-the-wheel game for your business: your logo, your gifts, 12 styles, player sign-up and Excel export." />
+    <meta name="theme-color" content="#058F9A" />
+    <link rel="icon" href="/assets/spin-icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/site.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-bar">
+      <div class="wrap">
+        <a class="site-logo" href="/"><img src="/assets/spin-icon.svg" alt="" width="38" height="38" />Spin</a>
+        <nav class="site-nav" aria-label="Account">
+          <span id="nav-signed-out">
+            <a class="btn btn-ghost btn-sm" href="/login">Sign in</a>
+            <a class="btn btn-primary btn-sm" href="/signup">Get started</a>
+          </span>
+          <a id="nav-signed-in" class="btn btn-primary btn-sm" href="/account" hidden>My companies</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="wrap hero">
+        <div>
+          <span class="eyebrow">Free for every business</span>
+          <h1>Your own <em>spin-the-wheel</em> game, ready in minutes</h1>
+          <p class="lead">Create a company, add your gifts and logo, pick a style, and share the link. Customers spin on their phone or a shop tablet, and you see every result.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary btn-lg" href="/signup">Create your game</a>
+            <a class="btn btn-secondary btn-lg" href="/login">I already have an account</a>
+          </div>
+          <p class="hero-note">No app to install. Works on phones, tablets and big screens.</p>
+        </div>
+        <div class="demo">
+          <div id="demo-wheel" class="demo-wheel" title="Tap to spin"></div>
+          <button id="demo-spin" class="btn btn-primary" type="button">Try a spin</button>
+          <p id="demo-result" class="demo-result" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="wrap">
+          <h2>Everything a prize game needs</h2>
+          <p class="sub">Each company gets its own game, its own admin and its own players, kept completely separate.</p>
+          <div class="features">
+            <div class="feature"><div class="ico" aria-hidden="true">🎨</div><h3>12 styles</h3><p>Classic wheels, a slot machine, a capsule machine, a drop board and more, all in your colours.</p></div>
+            <div class="feature"><div class="ico" aria-hidden="true">🎁</div><h3>Your gifts, your odds</h3><p>Set gift names, pictures, stock and chances. Gifts that run out stop being won.</p></div>
+            <div class="feature"><div class="ico" aria-hidden="true">🙋</div><h3>Know your players</h3><p>Ask for a name and phone number, limit spins per person and hand out claim codes.</p></div>
+            <div class="feature"><div class="ico" aria-hidden="true">📊</div><h3>Dashboard and Excel</h3><p>See spins and gifts live, mark gifts as handed out and export everything to Excel.</p></div>
+            <div class="feature"><div class="ico" aria-hidden="true">🏷️</div><h3>Your brand</h3><p>Upload your logo and icon and write your own title, steps and messages.</p></div>
+            <div class="feature"><div class="ico" aria-hidden="true">🏢</div><h3>Many companies</h3><p>One account can run games for several shops or brands, each with its own link.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="wrap">
+          <h2>How it works</h2>
+          <div class="steps-row">
+            <div class="step"><h3>Create an account</h3><p>Just your name, email and a password.</p></div>
+            <div class="step"><h3>Add your company</h3><p>Pick a name and a link like <code>/c/your-shop</code>.</p></div>
+            <div class="step"><h3>Make it yours</h3><p>Gifts, logo, style and rules in the admin.</p></div>
+            <div class="step"><h3>Share and play</h3><p>Send the link or open it on a counter tablet.</p></div>
+          </div>
+          <div class="final-cta">
+            <h2>Ready to spin?</h2>
+            <p>It takes about two minutes to set up your first game.</p>
+            <a class="btn btn-lg" href="/signup">Create your game</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-foot">Gifts are chosen and handed out by each company. Spin games are just for fun, and prizes have no cash value.</footer>
+    <script type="module" src="/js/home.js"></script>
+  </body>
+</html>

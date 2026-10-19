@@ -48,3 +48,14 @@ export function defaultConfig() {
     ],
   };
 }
+
+/** Starter game for a newly created company: the same wheel, worded for that company. */
+export function newCompanyConfig(companyName) {
+  const config = defaultConfig();
+  config.branding.tagline = `Spin the wheel for a little something from ${companyName}.`;
+  config.branding.instructions[2] = 'If you land on a gift, show your claim code to a member of our team.';
+  for (const seg of config.segments) {
+    seg.description = seg.description.replace(/PharmKulen /g, '');
+  }
+  return config;
+}

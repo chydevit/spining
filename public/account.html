@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>My companies · Spin</title>
+    <link rel="icon" href="/assets/spin-icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/site.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-bar">
+      <div class="wrap">
+        <a class="site-logo" href="/"><img src="/assets/spin-icon.svg" alt="" width="38" height="38" />Spin</a>
+        <nav class="site-nav" aria-label="Account">
+          <span id="who" class="who"></span>
+          <span id="role-badge" class="pill pill-plain role-badge" hidden></span>
+          <button id="logout" class="btn btn-secondary btn-sm" type="button">Sign out</button>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="wrap" hidden>
+      <nav id="account-tabs" class="account-tabs" aria-label="Account navigation" hidden>
+        <button id="tab-my-companies" class="tab-btn active" type="button">My companies</button>
+        <button id="tab-super-admin" class="tab-btn" type="button">Super Admin Console <span class="tab-tag">Roles & All Companies</span></button>
+      </nav>
+
+      <div id="view-companies">
+        <div class="page-head">
+          <div>
+            <h1>My companies</h1>
+            <p>Each company has its own game, link, players and admin.</p>
+          </div>
+          <a class="btn btn-primary" href="#create">+ New company</a>
+        </div>
+
+      <div id="welcome" class="notice" role="status" hidden>Your account is ready. Create your first company below to get its game.</div>
+
+      <div id="companies" class="companies" aria-live="polite"></div>
+      <div id="no-companies" class="empty-companies" hidden>
+        <img src="/assets/spin-icon.svg" alt="" width="64" height="64" />
+        <strong>No companies yet</strong>
+        <span>Create one below and you'll get your own game and admin straight away.</span>
+      </div>
+
+      <h2 id="create" class="section-title">Create a company</h2>
+      <form id="create-form" class="card create-card form" novalidate>
+        <div class="two-col">
+          <div class="field">
+            <label for="c-name">Company name</label>
+            <input id="c-name" class="input" maxlength="60" placeholder="e.g. Sunrise Café" required aria-describedby="c-name-error" />
+            <p id="c-name-error" class="field-error" role="alert"></p>
+          </div>
+          <div class="field">
+            <label for="c-slug">Game link</label>
+            <div class="slug-row">
+              <span id="slug-prefix" class="slug-prefix">/c/</span>
+              <input id="c-slug" class="input" maxlength="40" autocomplete="off" spellcheck="false" placeholder="your-shop" aria-describedby="c-slug-status" />
+            </div>
+            <p id="c-slug-status" class="slug-status" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="hint">You'll start with a ready-made wheel you can change: gifts, logo, colours, style and rules.</p>
+        <div><button id="create-submit" class="btn btn-primary" type="submit">Create company</button></div>
+      </form>
+
+      <h2 class="section-title">Your account</h2>
+      <div class="two-col">
+        <form id="profile-form" class="card settings-card form" novalidate>
+          <h2>Profile</h2>
+          <div class="field">
+            <label for="p-name">Name</label>
+            <input id="p-name" class="input" autocomplete="name" maxlength="60" required />
+          </div>
+          <div class="field">
+            <label for="p-email">Email</label>
+            <input id="p-email" class="input" type="email" autocomplete="email" maxlength="120" required />
+          </div>
+          <p id="p-error" class="field-error" role="alert"></p>
+          <div><button id="p-submit" class="btn btn-secondary" type="submit">Save profile</button></div>
+        </form>
+        <form id="password-form" class="card settings-card form" novalidate>
+          <h2>Password</h2>
+          <div class="field">
+            <label for="pw-current">Current password</label>
+            <input id="pw-current" class="input" type="password" autocomplete="current-password" required />
+          </div>
+          <div class="field">
+            <label for="pw-new">New password</label>
+            <input id="pw-new" class="input" type="password" autocomplete="new-password" minlength="8" required aria-describedby="pw-hint" />
+            <p id="pw-hint" class="hint">At least 8 characters. Other devices will be signed out.</p>
+          </div>
+          <p id="pw-error" class="field-error" role="alert"></p>
+          <div><button id="pw-submit" class="btn btn-secondary" type="submit">Change password</button></div>
+        </form>
+      </div>
+    </div> <!-- /#view-companies -->
+
+    <div id="view-super" hidden>
+      <div class="page-head">
+        <div>
+          <h1>Super Admin Console</h1>
+          <p>Manage all accounts, assign roles, and administer all companies across Spin.</p>
+        </div>
+        <button id="refresh-super" class="btn btn-secondary btn-sm" type="button">↻ Refresh data</button>
+      </div>
+
+      <div class="super-stats-grid">
+        <div class="card super-stat-card">
+          <span class="stat-title">Total Users</span>
+          <strong id="stat-users" class="stat-value">0</strong>
+          <span id="stat-roles-breakdown" class="stat-sub">Loading…</span>
+        </div>
+        <div class="card super-stat-card">
+          <span class="stat-title">Total Companies</span>
+          <strong id="stat-companies" class="stat-value">0</strong>
+          <span class="stat-sub">Across all owners</span>
+        </div>
+        <div class="card super-stat-card">
+          <span class="stat-title">Spins Today</span>
+          <strong id="stat-spins-today" class="stat-value">0</strong>
+          <span class="stat-sub">Live player activity</span>
+        </div>
+        <div class="card super-stat-card">
+          <span class="stat-title">Spins All Time</span>
+          <strong id="stat-spins-total" class="stat-value">0</strong>
+          <span class="stat-sub">All-time games played</span>
+        </div>
+      </div>
+
+      <div class="card role-guide-card">
+        <h2>Role Permissions Overview</h2>
+        <div class="role-grid">
+          <div class="role-item">
+            <span class="pill pill-super">👑 Super Admin</span>
+            <p>Full unrestricted platform control. Can manage all users, assign any role, reset credentials, access and edit any company game, and reassign ownership.</p>
+          </div>
+          <div class="role-item">
+            <span class="pill pill-admin">Admin</span>
+            <p>Standard company owner. Can create and manage their own companies and games. Cannot view or edit other users' companies or access super admin tools.</p>
+          </div>
+          <div class="role-item">
+            <span class="pill pill-staff">Staff</span>
+            <p>Operational member. Can view assigned company dashboard and claim codes, and mark gifts as handed out. Cannot alter game wheel settings or delete companies.</p>
+          </div>
+          <div class="role-item">
+            <span class="pill pill-user">User</span>
+            <p>Standard account. Can log in and view games.</p>
+          </div>
+        </div>
+      </div>
+
+      <section class="super-section">
+        <div class="section-header-row">
+          <div>
+            <h2 class="section-title">All Users & Role Management</h2>
+            <p class="section-desc">View all accounts, edit roles, reset passwords, or remove accounts.</p>
+          </div>
+          <div class="filter-group">
+            <input id="user-search" class="input input-sm" placeholder="Search name or email…" />
+            <select id="user-role-filter" class="select input-sm">
+              <option value="">All Roles</option>
+              <option value="superadmin">Super Admin</option>
+              <option value="admin">Admin</option>
+              <option value="staff">Staff</option>
+              <option value="user">User</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card table-card">
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Role</th>
+                  <th>Companies Owned</th>
+                  <th>Joined</th>
+                  <th class="actions-col">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="super-users-table">
+                <tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--ink-3);">Loading users…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="super-section">
+        <div class="section-header-row">
+          <div>
+            <h2 class="section-title">All Companies Across Spin</h2>
+            <p class="section-desc">Inspect every company, open their admin console directly, or reassign ownership.</p>
+          </div>
+          <div class="filter-group">
+            <input id="company-search" class="input input-sm" placeholder="Search company or owner…" />
+          </div>
+        </div>
+
+        <div class="card table-card">
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Company</th>
+                  <th>Owner</th>
+                  <th>Status</th>
+                  <th class="num">Today</th>
+                  <th class="num">Total</th>
+                  <th class="actions-col">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="super-companies-table">
+                <tr><td colspan="6" style="text-align:center; padding: 24px; color: var(--ink-3);">Loading companies…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div> <!-- /#view-super -->
+
+    <div class="site-foot"></div>
+  </main>
+
+
+    <dialog id="rename-dialog" class="site-dialog" aria-labelledby="rename-title">
+      <form id="rename-form" method="dialog" novalidate>
+        <h2 id="rename-title">Rename company</h2>
+        <div class="field">
+          <label for="rename-name">Company name</label>
+          <input id="rename-name" class="input" maxlength="60" required />
+          <p class="hint">The game link stays the same.</p>
+        </div>
+        <p id="rename-error" class="field-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" type="button" data-close>Cancel</button>
+          <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="delete-dialog" class="site-dialog" aria-labelledby="delete-title">
+      <form id="delete-form" method="dialog" novalidate>
+        <h2 id="delete-title">Delete company?</h2>
+        <p>This permanently deletes <strong id="delete-name"></strong>: its game, settings, images, spins and players' names and phone numbers. Export to Excel first if you need a copy.</p>
+        <div class="field">
+          <label for="delete-confirm">Type <strong id="delete-slug"></strong> to confirm</label>
+          <input id="delete-confirm" class="input" autocomplete="off" spellcheck="false" />
+        </div>
+        <p id="delete-error" class="field-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" type="button" data-close>Cancel</button>
+          <button id="delete-submit" class="btn btn-danger" type="submit" disabled>Delete for good</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Change Role Dialog -->
+    <dialog id="role-dialog" class="site-dialog" aria-labelledby="role-title">
+      <form id="role-form" method="dialog" novalidate>
+        <h2 id="role-title">Change user role</h2>
+        <p>Select the new role for <strong id="role-user-name"></strong> (<span id="role-user-email"></span>):</p>
+        <div class="role-radio-group">
+          <label class="role-radio-card" id="card-role-superadmin">
+            <input type="radio" name="targetRole" value="superadmin" />
+            <div class="role-card-info">
+              <div class="role-card-header"><span class="pill pill-super">👑 Super Admin</span></div>
+              <span>Full platform control: manage all users, assign roles, and administer every company game.</span>
+            </div>
+          </label>
+          <label class="role-radio-card" id="card-role-admin">
+            <input type="radio" name="targetRole" value="admin" />
+            <div class="role-card-info">
+              <div class="role-card-header"><span class="pill pill-admin">Admin</span></div>
+              <span>Company creator: can create and manage their own companies and wheels.</span>
+            </div>
+          </label>
+          <label class="role-radio-card" id="card-role-staff">
+            <input type="radio" name="targetRole" value="staff" />
+            <div class="role-card-info">
+              <div class="role-card-header"><span class="pill pill-staff">Staff</span></div>
+              <span>Operational: view company dashboard and redeem player gifts. Cannot edit wheel.</span>
+            </div>
+          </label>
+          <label class="role-radio-card" id="card-role-user">
+            <input type="radio" name="targetRole" value="user" />
+            <div class="role-card-info">
+              <div class="role-card-header"><span class="pill pill-user">User</span></div>
+              <span>Standard account: play games and view public pages.</span>
+            </div>
+          </label>
+        </div>
+        <p id="role-error" class="field-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" type="button" data-close>Cancel</button>
+          <button id="role-submit" class="btn btn-primary" type="submit">Update role</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Super Admin Reset Password Dialog -->
+    <dialog id="super-pw-dialog" class="site-dialog" aria-labelledby="super-pw-title">
+      <form id="super-pw-form" method="dialog" novalidate>
+        <h2 id="super-pw-title">Reset user password</h2>
+        <p>Set a new password for <strong id="super-pw-user"></strong>. All existing active sessions for this account will be invalidated immediately.</p>
+        <div class="field">
+          <label for="super-pw-input">New password</label>
+          <div style="display:flex; gap: 8px;">
+            <input id="super-pw-input" class="input" type="text" minlength="8" required placeholder="Minimum 8 characters" style="flex:1;" />
+            <button id="super-pw-gen" class="btn btn-secondary btn-sm" type="button">Generate</button>
+          </div>
+          <p class="hint">Use at least 8 characters. The user will need to log in using this password.</p>
+        </div>
+        <p id="super-pw-error" class="field-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" type="button" data-close>Cancel</button>
+          <button id="super-pw-submit" class="btn btn-primary" type="submit">Set password</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Transfer Company Dialog -->
+    <dialog id="transfer-dialog" class="site-dialog" aria-labelledby="transfer-title">
+      <form id="transfer-form" method="dialog" novalidate>
+        <h2 id="transfer-title">Transfer company ownership</h2>
+        <p>Transfer <strong id="transfer-company-name"></strong> (<span id="transfer-company-slug"></span>) to a new owner:</p>
+        <div class="field">
+          <label for="transfer-owner-select">New owner</label>
+          <select id="transfer-owner-select" class="select" required></select>
+        </div>
+        <p id="transfer-error" class="field-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" type="button" data-close>Cancel</button>
+          <button id="transfer-submit" class="btn btn-primary" type="submit">Transfer ownership</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Delete User Dialog -->
+    <dialog id="super-delete-user-dialog" class="site-dialog" aria-labelledby="super-del-title">
+      <form id="super-delete-user-form" method="dialog" novalidate>
+        <h2 id="super-del-title">Delete user account?</h2>
+        <p>This permanently deletes the account <strong id="super-del-email"></strong>. Any companies owned by this user will be safely transferred to your Super Admin account.</p>
+        <div class="field">
+          <label for="super-del-confirm">Type <strong id="super-del-confirm-text"></strong> or <strong>DELETE</strong> to confirm</label>
+          <input id="super-del-confirm" class="input" autocomplete="off" spellcheck="false" />
+        </div>
+        <p id="super-del-error" class="field-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" type="button" data-close>Cancel</button>
+          <button id="super-del-submit" class="btn btn-danger" type="submit" disabled>Delete user</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toasts" class="toast-region" aria-live="polite"></div>
+
+    <script type="module" src="/js/account.js"></script>
+  </body>
+</html>

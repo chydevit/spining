@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createApp } from '../server.js';
+import { freshDatabase } from './helpers.js';
 
 const PASSWORD = 'correct-horse-battery';
 const who = (phone, name = 'Test Player') => ({ name, phone });
@@ -15,7 +16,7 @@ let dataDir;
 
 before(async () => {
   dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pk-spin-test-'));
-  const app = await createApp({ dataDir, adminPassword: PASSWORD, databaseUrl: process.env.TEST_DATABASE_URL, log: () => {} });
+  const app = await createApp({ dataDir, adminPassword: PASSWORD, databaseUrl: await freshDatabase(), log: () => {} });
   closeApp = app.close;
   server = http.createServer(app.handler);
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
@@ -48,8 +49,10 @@ async function call(pathname, { method = 'GET', body, cookie, headers = {} } = {
   return { res, data };
 }
 
+const OWNER = 'admin@pharmkulen.local'; // the starter company's owner (created from ADMIN_PASSWORD)
+
 async function login() {
-  const { res } = await call('/api/admin/login', { method: 'POST', body: { password: PASSWORD } });
+  const { res } = await call('/api/auth/login', { method: 'POST', body: { email: OWNER, password: PASSWORD } });
   assert.equal(res.status, 200);
   return cookieFrom(res);
 }
@@ -57,17 +60,24 @@ async function login() {
 test('public pages and security headers are served', async () => {
   const { res, data } = await call('/');
   assert.equal(res.status, 200);
-  assert.match(data, /pharmkulen-logo\.png/);
+  assert.match(data, /Create your game/); // landing page
   assert.match(res.headers.get('content-security-policy'), /default-src 'self'/);
-  const admin = await call('/admin');
+  const game = await call('/c/pharmkulen');
+  assert.equal(game.res.status, 200);
+  assert.match(game.data, /js\/app\.js/);
+  const admin = await call('/c/pharmkulen/admin');
   assert.equal(admin.res.status, 200);
   assert.equal(admin.res.headers.get('x-robots-tag'), 'noindex, nofollow');
+  assert.equal((await call('/c/no-such-company')).res.status, 404);
+  const old = await fetch(`${base}/admin`, { redirect: 'manual' });
+  assert.equal(old.status, 302);
+  assert.equal(old.headers.get('location'), '/account');
   const traversal = await call('/../server.js');
   assert.notEqual(traversal.res.status, 200);
 });
 
 test('game config hides stock numbers', async () => {
-  const { data } = await call('/api/game');
+  const { data } = await call('/api/c/pharmkulen/game');
   assert.equal(data.status.open, true);
   assert.ok(data.segments.length >= 2);
   assert.equal(data.segments[0].quantity, undefined);
@@ -75,32 +85,35 @@ test('game config hides stock numbers', async () => {
 });
 
 test('admin endpoints require authentication', async () => {
-  for (const [p, m] of [['/api/admin/config', 'GET'], ['/api/admin/stats', 'GET'], ['/api/admin/export.csv', 'GET']]) {
+  for (const [p, m] of [['/api/c/pharmkulen/admin/config', 'GET'], ['/api/c/pharmkulen/admin/stats', 'GET'], ['/api/c/pharmkulen/admin/export.csv', 'GET']]) {
     const { res } = await call(p, { method: m });
     assert.equal(res.status, 401, p);
   }
-  const { res } = await call('/api/admin/config', { method: 'PUT', body: {} });
+  const { res } = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', body: {} });
   assert.equal(res.status, 401);
 });
 
 test('wrong password is rejected, right one gives an HttpOnly session', async () => {
-  const bad = await call('/api/admin/login', { method: 'POST', body: { password: 'nope' } });
+  const bad = await call('/api/auth/login', { method: 'POST', body: { email: OWNER, password: 'nope' } });
   assert.equal(bad.res.status, 401);
-  const good = await call('/api/admin/login', { method: 'POST', body: { password: PASSWORD } });
+  const unknown = await call('/api/auth/login', { method: 'POST', body: { email: 'nobody@example.com', password: PASSWORD } });
+  assert.equal(unknown.res.status, 401);
+  assert.equal(unknown.data.error, bad.data.error); // never reveals which emails exist
+  const good = await call('/api/auth/login', { method: 'POST', body: { email: OWNER.toUpperCase(), password: PASSWORD } });
   assert.equal(good.res.status, 200);
   assert.match(good.res.headers.get('set-cookie'), /HttpOnly; SameSite=Strict/);
 });
 
 test('cross-origin state changes are blocked', async () => {
-  const { res } = await call('/api/admin/login', {
-    method: 'POST', body: { password: PASSWORD }, headers: { Origin: 'https://evil.example' },
+  const { res } = await call('/api/auth/login', {
+    method: 'POST', body: { email: OWNER, password: PASSWORD }, headers: { Origin: 'https://evil.example' },
   });
   assert.equal(res.status, 403);
 });
 
 test('spinning decrements stock, issues claim codes and is counted', async () => {
   const cookie = await login();
-  const { data: cfgRes } = await call('/api/admin/config', { cookie });
+  const { data: cfgRes } = await call('/api/c/pharmkulen/admin/config', { cookie });
   // Make a deterministic wheel: one gift with 2 in stock and one unlimited message (weight 0).
   const config = cfgRes.config;
   config.segments = [
@@ -108,117 +121,117 @@ test('spinning decrements stock, issues claim codes and is counted', async () =>
     { id: 'msg', label: 'Try Again', description: '', color: '#62DBFF', weight: 0, quantity: null, isPrize: false },
   ];
   config.availability.spinsPerDevicePerDay = 0;
-  const saved = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
+  const saved = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
   assert.equal(saved.res.status, 200, JSON.stringify(saved.data));
 
-  const s1 = await call('/api/spin', { method: 'POST', body: who('011100100') });
+  const s1 = await call('/api/c/pharmkulen/spin', { method: 'POST', body: who('011100100') });
   assert.equal(s1.res.status, 200);
   assert.equal(s1.data.segment.id, 'gift');
   assert.match(s1.data.code, /^PK-[A-Z2-9]{6}$/);
   const player = cookieFrom(s1.res);
-  const s2 = await call('/api/spin', { method: 'POST', body: who('011100100'), cookie: player });
+  const s2 = await call('/api/c/pharmkulen/spin', { method: 'POST', body: who('011100100'), cookie: player });
   assert.equal(s2.res.status, 200);
   // Stock now 0 and nothing else has weight → closed.
-  const s3 = await call('/api/spin', { method: 'POST', body: who('011100100'), cookie: player });
+  const s3 = await call('/api/c/pharmkulen/spin', { method: 'POST', body: who('011100100'), cookie: player });
   assert.equal(s3.res.status, 409);
   assert.equal(s3.data.status.reason, 'no-outcomes');
 
-  const { data: stats } = await call('/api/admin/stats', { cookie });
+  const { data: stats } = await call('/api/c/pharmkulen/admin/stats', { cookie });
   assert.equal(stats.totals.spins, 2);
   assert.equal(stats.totals.prizesAwarded, 2);
   assert.equal(stats.segments.find((s) => s.id === 'gift').remaining, 0);
 
   // Redeem one and find it by code.
-  const found = await call(`/api/admin/spins?q=${s1.data.code}`, { cookie });
+  const found = await call(`/api/c/pharmkulen/admin/spins?q=${s1.data.code}`, { cookie });
   assert.equal(found.data.spins.length, 1);
-  const red = await call(`/api/admin/spins/${found.data.spins[0].id}/redeem`, { method: 'POST', cookie, body: { redeemed: true } });
+  const red = await call(`/api/c/pharmkulen/admin/spins/${found.data.spins[0].id}/redeem`, { method: 'POST', cookie, body: { redeemed: true } });
   assert.equal(red.data.spin.redeemed, true);
 
-  const csv = await call('/api/admin/export.csv', { cookie });
+  const csv = await call('/api/c/pharmkulen/admin/export.csv', { cookie });
   assert.match(csv.res.headers.get('content-type'), /text\/csv/);
   assert.match(csv.data, new RegExp(s1.data.code));
 });
 
 test('saving with an untouched stale quantity keeps the live stock', async () => {
   const cookie = await login();
-  const { data: cfgRes } = await call('/api/admin/config', { cookie });
+  const { data: cfgRes } = await call('/api/c/pharmkulen/admin/config', { cookie });
   const config = cfgRes.config;
   config.segments = [
     { id: 'gift', label: 'Sticker', description: '', color: '#11BD9B', weight: 1, quantity: 5, isPrize: true },
     { id: 'msg', label: 'Try Again', description: '', color: '#62DBFF', weight: 0, quantity: null, isPrize: false },
   ];
-  let r = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
+  let r = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
   const version = r.data.version;
   const loaded = r.data.config;
 
-  await call('/api/spin', { method: 'POST', body: who('011200200') }); // stock 5 → 4 while admin edits
+  await call('/api/c/pharmkulen/spin', { method: 'POST', body: who('011200200') }); // stock 5 → 4 while admin edits
 
   loaded.branding.title = 'Spin & Smile';
   loaded.segments.forEach((s) => (s.quantityLoaded = s.quantity));
-  r = await call('/api/admin/config', { method: 'PUT', cookie, body: { version, config: loaded } });
+  r = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', cookie, body: { version, config: loaded } });
   assert.equal(r.res.status, 200);
   assert.equal(r.data.config.segments[0].quantity, 4);
   assert.equal(r.data.config.branding.title, 'Spin & Smile');
 
   // Stale version is rejected.
-  const stale = await call('/api/admin/config', { method: 'PUT', cookie, body: { version, config: loaded } });
+  const stale = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', cookie, body: { version, config: loaded } });
   assert.equal(stale.res.status, 409);
 });
 
 test('invalid config returns 422 with readable errors', async () => {
   const cookie = await login();
-  const { data: cfgRes } = await call('/api/admin/config', { cookie });
+  const { data: cfgRes } = await call('/api/c/pharmkulen/admin/config', { cookie });
   const config = cfgRes.config;
   config.branding.title = '';
-  const r = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
+  const r = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
   assert.equal(r.res.status, 422);
   assert.ok(r.data.errors.some((e) => e.includes('Game title')));
 });
 
 test('daily spin limit per device is enforced', async () => {
   const cookie = await login();
-  const { data: cfgRes } = await call('/api/admin/config', { cookie });
+  const { data: cfgRes } = await call('/api/c/pharmkulen/admin/config', { cookie });
   const config = cfgRes.config;
   config.segments = [
     { id: 'a', label: 'Health Tip', description: '', color: '#19B2FF', weight: 1, quantity: null, isPrize: false },
     { id: 'b', label: 'Try Again', description: '', color: '#62DBFF', weight: 1, quantity: null, isPrize: false },
   ];
   config.availability.spinsPerDevicePerDay = 2;
-  const saved = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
+  const saved = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
   assert.equal(saved.res.status, 200);
 
-  const s1 = await call('/api/spin', { method: 'POST', body: who('011300300') });
+  const s1 = await call('/api/c/pharmkulen/spin', { method: 'POST', body: who('011300300') });
   const player = cookieFrom(s1.res);
   assert.equal(s1.data.spinsLeft, 1);
-  const s2 = await call('/api/spin', { method: 'POST', body: who('011300300'), cookie: player });
+  const s2 = await call('/api/c/pharmkulen/spin', { method: 'POST', body: who('011300300'), cookie: player });
   assert.equal(s2.data.spinsLeft, 0);
-  const s3 = await call('/api/spin', { method: 'POST', body: who('011300300'), cookie: player });
+  const s3 = await call('/api/c/pharmkulen/spin', { method: 'POST', body: who('011300300'), cookie: player });
   assert.equal(s3.res.status, 429);
 });
 
 test('password change signs out other sessions', async () => {
   const a = await login();
   const b = await login();
-  const r = await call('/api/admin/password', { method: 'POST', cookie: a, body: { currentPassword: PASSWORD, newPassword: 'another-long-password' } });
+  const r = await call('/api/auth/password', { method: 'POST', cookie: a, body: { currentPassword: PASSWORD, newPassword: 'another-long-password' } });
   assert.equal(r.res.status, 200);
-  const newA = cookieFrom(r.res);
-  assert.equal((await call('/api/admin/stats', { cookie: b })).res.status, 401);
-  assert.equal((await call('/api/admin/stats', { cookie: newA })).res.status, 200);
+  const newA = a; // the device that changed the password stays signed in
+  assert.equal((await call('/api/c/pharmkulen/admin/stats', { cookie: b })).res.status, 401);
+  assert.equal((await call('/api/c/pharmkulen/admin/stats', { cookie: newA })).res.status, 200);
   // restore for other tests
-  await call('/api/admin/password', { method: 'POST', cookie: newA, body: { currentPassword: 'another-long-password', newPassword: PASSWORD } });
+  await call('/api/auth/password', { method: 'POST', cookie: newA, body: { currentPassword: 'another-long-password', newPassword: PASSWORD } });
 });
 
 test('admins can upload a segment image; others cannot; bad files are rejected', async () => {
   // 1x1 transparent PNG
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
-  const anon = await fetch(`${base}/api/admin/uploads`, { method: 'POST', headers: { 'Content-Type': 'image/png' }, body: png });
+  const anon = await fetch(`${base}/api/c/pharmkulen/admin/uploads`, { method: 'POST', headers: { 'Content-Type': 'image/png' }, body: png });
   assert.equal(anon.status, 401);
 
   const cookie = await login();
-  const fake = await fetch(`${base}/api/admin/uploads`, { method: 'POST', headers: { 'Content-Type': 'image/png', Cookie: cookie }, body: Buffer.from('<svg onload=alert(1)>') });
+  const fake = await fetch(`${base}/api/c/pharmkulen/admin/uploads`, { method: 'POST', headers: { 'Content-Type': 'image/png', Cookie: cookie }, body: Buffer.from('<svg onload=alert(1)>') });
   assert.equal(fake.status, 415);
 
-  const up = await fetch(`${base}/api/admin/uploads`, { method: 'POST', headers: { 'Content-Type': 'image/png', Cookie: cookie }, body: png });
+  const up = await fetch(`${base}/api/c/pharmkulen/admin/uploads`, { method: 'POST', headers: { 'Content-Type': 'image/png', Cookie: cookie }, body: png });
   assert.equal(up.status, 201);
   const { url } = await up.json();
   assert.match(url, /^\/uploads\/[a-f0-9]{24}\.png$/);
@@ -229,76 +242,76 @@ test('admins can upload a segment image; others cannot; bad files are rejected',
   assert.equal((await fetch(`${base}/uploads/../db.json`)).status, 404);
 
   // Attach it to a segment and check players receive it.
-  const { data: cfgRes } = await call('/api/admin/config', { cookie });
+  const { data: cfgRes } = await call('/api/c/pharmkulen/admin/config', { cookie });
   const config = cfgRes.config;
   config.segments[0].image = url;
-  const saved = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
+  const saved = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
   assert.equal(saved.res.status, 200);
-  const { data: game } = await call('/api/game');
+  const { data: game } = await call('/api/c/pharmkulen/game');
   assert.equal(game.segments[0].image, url);
 
   // Arbitrary URLs are refused.
   config.segments[0].image = 'https://evil.example/x.png';
-  const bad = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: saved.data.version, config } });
+  const bad = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', cookie, body: { version: saved.data.version, config } });
   assert.equal(bad.res.status, 422);
 });
 
 test('spinning requires a name and valid phone; details are stored and exported', async () => {
   const cookie = await login();
-  const { data: cfgRes } = await call('/api/admin/config', { cookie });
+  const { data: cfgRes } = await call('/api/c/pharmkulen/admin/config', { cookie });
   const config = cfgRes.config;
   config.segments = [
     { id: 'gift', label: 'Sticker', description: '', color: '#11BD9B', weight: 1, quantity: null, isPrize: true },
     { id: 'msg', label: 'Try Again', description: '', color: '#62DBFF', weight: 0, quantity: null, isPrize: false },
   ];
   config.availability.spinsPerDevicePerDay = 1;
-  const saved = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
+  const saved = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
   assert.equal(saved.res.status, 200);
 
-  const missing = await call('/api/spin', { method: 'POST', body: {} });
+  const missing = await call('/api/c/pharmkulen/spin', { method: 'POST', body: {} });
   assert.equal(missing.res.status, 422);
   assert.equal(missing.data.needDetails, true);
   assert.ok(missing.data.fields.name && missing.data.fields.phone);
   assert.equal(missing.data.fields.consent, undefined);
 
-  const badPhone = await call('/api/spin', { method: 'POST', body: { name: 'Dara', phone: 'call me' } });
+  const badPhone = await call('/api/c/pharmkulen/spin', { method: 'POST', body: { name: 'Dara', phone: 'call me' } });
   assert.equal(badPhone.data.fields.phone !== undefined, true);
 
-  const ok = await call('/api/spin', { method: 'POST', body: { name: '  សុខ   Dara ', phone: '012 345-678' } });
+  const ok = await call('/api/c/pharmkulen/spin', { method: 'POST', body: { name: '  សុខ   Dara ', phone: '012 345-678' } });
   assert.equal(ok.res.status, 200, JSON.stringify(ok.data));
   assert.equal(ok.data.spinsLeft, 0);
 
   // Limit follows the phone number, even from a different device (no cookie).
-  const again = await call('/api/spin', { method: 'POST', body: who('012345678') });
+  const again = await call('/api/c/pharmkulen/spin', { method: 'POST', body: who('012345678') });
   assert.equal(again.res.status, 429);
   // ...but a different person on the same shared device can still play.
-  const other = await call('/api/spin', { method: 'POST', body: who('098765432', 'Sophea'), cookie: cookieFrom(ok.res) });
+  const other = await call('/api/c/pharmkulen/spin', { method: 'POST', body: who('098765432', 'Sophea'), cookie: cookieFrom(ok.res) });
   assert.equal(other.res.status, 200);
 
-  const found = await call('/api/admin/spins?q=345678', { cookie });
+  const found = await call('/api/c/pharmkulen/admin/spins?q=345678', { cookie });
   assert.equal(found.data.spins[0].name, 'សុខ Dara');
   assert.equal(found.data.spins[0].phone, '012345678');
 
-  const csv = await call('/api/admin/export.csv', { cookie });
-  const rawCsv = Buffer.from(await (await fetch(`${base}/api/admin/export.csv`, { headers: { Cookie: cookie } })).arrayBuffer());
+  const csv = await call('/api/c/pharmkulen/admin/export.csv', { cookie });
+  const rawCsv = Buffer.from(await (await fetch(`${base}/api/c/pharmkulen/admin/export.csv`, { headers: { Cookie: cookie } })).arrayBuffer());
   assert.deepEqual([...rawCsv.subarray(0, 3)], [0xef, 0xbb, 0xbf]); // UTF-8 BOM for Excel
   assert.match(csv.data, /Time,Name,Phone,Outcome/);
   assert.match(csv.data, /សុខ Dara,012345678,Sticker/);
 
-  const xlsx = await fetch(`${base}/api/admin/export.xlsx`, { headers: { Cookie: cookie } });
+  const xlsx = await fetch(`${base}/api/c/pharmkulen/admin/export.xlsx`, { headers: { Cookie: cookie } });
   assert.equal(xlsx.status, 200);
   assert.match(xlsx.headers.get('content-type'), /spreadsheetml/);
   const buf = Buffer.from(await xlsx.arrayBuffer());
   assert.equal(buf.readUInt32LE(0), 0x04034b50); // ZIP signature
   assert.ok(buf.includes(Buffer.from('xl/worksheets/sheet1.xml')));
 
-  const anon = await fetch(`${base}/api/admin/export.xlsx`);
+  const anon = await fetch(`${base}/api/c/pharmkulen/admin/export.xlsx`);
   assert.equal(anon.status, 401);
 });
 
 test('"in total" limit: a phone number can only play once, a new name and phone can play', async () => {
   const cookie = await login();
-  const { data: cfgRes } = await call('/api/admin/config', { cookie });
+  const { data: cfgRes } = await call('/api/c/pharmkulen/admin/config', { cookie });
   const config = cfgRes.config;
   config.segments = [
     { id: 'a', label: 'Health Tip', description: '', color: '#19B2FF', weight: 1, quantity: null, isPrize: false },
@@ -306,56 +319,56 @@ test('"in total" limit: a phone number can only play once, a new name and phone 
   ];
   config.availability.spinsPerDevicePerDay = 1;
   config.availability.limitPeriod = 'total';
-  const saved = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
+  const saved = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
   assert.equal(saved.res.status, 200);
   assert.equal(saved.data.config.availability.limitPeriod, 'total');
 
-  const game = await call('/api/game');
+  const game = await call('/api/c/pharmkulen/game');
   assert.equal(game.data.limitPeriod, 'total');
   assert.equal(game.data.spinsPerDay, 1);
 
-  const first = await call('/api/spin', { method: 'POST', body: who('015555001', 'Vanna') });
+  const first = await call('/api/c/pharmkulen/spin', { method: 'POST', body: who('015555001', 'Vanna') });
   assert.equal(first.res.status, 200);
   assert.equal(first.data.spinsLeft, 0);
   const device = cookieFrom(first.res);
 
-  const repeat = await call('/api/spin', { method: 'POST', body: who('015 555 001', 'Vanna again'), cookie: device });
+  const repeat = await call('/api/c/pharmkulen/spin', { method: 'POST', body: who('015 555 001', 'Vanna again'), cookie: device });
   assert.equal(repeat.res.status, 429);
   assert.equal(repeat.data.phoneUsed, true);
   assert.match(repeat.data.error, /different name and phone number/);
 
-  const next = await call('/api/spin', { method: 'POST', body: who('015555002', 'Rithy'), cookie: device });
+  const next = await call('/api/c/pharmkulen/spin', { method: 'POST', body: who('015555002', 'Rithy'), cookie: device });
   assert.equal(next.res.status, 200);
 });
 
 test('spins can be filtered by day, and one day can be deleted', async () => {
   const cookie = await login();
-  const today = (await call('/api/admin/stats', { cookie })).data.days.at(-1).day;
+  const today = (await call('/api/c/pharmkulen/admin/stats', { cookie })).data.days.at(-1).day;
 
-  const day = await call(`/api/admin/spins?day=${today}`, { cookie });
+  const day = await call(`/api/c/pharmkulen/admin/spins?day=${today}`, { cookie });
   assert.equal(day.res.status, 200);
   assert.ok(day.data.total > 0);
   assert.ok(day.data.spins.every((s) => s.at));
-  const other = await call('/api/admin/spins?day=2000-01-01', { cookie });
+  const other = await call('/api/c/pharmkulen/admin/spins?day=2000-01-01', { cookie });
   assert.equal(other.data.total, 0);
-  assert.equal((await call('/api/admin/spins?day=yesterday', { cookie })).res.status, 400);
+  assert.equal((await call('/api/c/pharmkulen/admin/spins?day=yesterday', { cookie })).res.status, 400);
 
   // Search and day combine.
-  const both = await call(`/api/admin/spins?day=${today}&q=015555001`, { cookie });
+  const both = await call(`/api/c/pharmkulen/admin/spins?day=${today}&q=015555001`, { cookie });
   assert.equal(both.data.total, 1);
 
-  const noConfirm = await call('/api/admin/spins/delete-day', { method: 'POST', cookie, body: { day: today } });
+  const noConfirm = await call('/api/c/pharmkulen/admin/spins/delete-day', { method: 'POST', cookie, body: { day: today } });
   assert.equal(noConfirm.res.status, 400);
-  const anon = await call('/api/admin/spins/delete-day', { method: 'POST', body: { day: today, confirm: 'DELETE' } });
+  const anon = await call('/api/c/pharmkulen/admin/spins/delete-day', { method: 'POST', body: { day: today, confirm: 'DELETE' } });
   assert.equal(anon.res.status, 401);
 
-  const del = await call('/api/admin/spins/delete-day', { method: 'POST', cookie, body: { day: today, confirm: 'DELETE' } });
+  const del = await call('/api/c/pharmkulen/admin/spins/delete-day', { method: 'POST', cookie, body: { day: today, confirm: 'DELETE' } });
   assert.equal(del.res.status, 200);
   assert.equal(del.data.deleted, day.data.total);
-  assert.equal((await call(`/api/admin/spins?day=${today}`, { cookie })).data.total, 0);
+  assert.equal((await call(`/api/c/pharmkulen/admin/spins?day=${today}`, { cookie })).data.total, 0);
 
   // The "in total" limit is counted from spins, so that player can play again.
-  const again = await call('/api/spin', { method: 'POST', body: who('015555001', 'Vanna') });
+  const again = await call('/api/c/pharmkulen/spin', { method: 'POST', body: who('015555001', 'Vanna') });
   assert.equal(again.res.status, 200);
 });
 
@@ -370,45 +383,45 @@ test('styles and scripts revalidate with an ETag', async () => {
 
 test('the claw machine style can be chosen and is sent to players', async () => {
   const cookie = await login();
-  const { data: cfgRes } = await call('/api/admin/config', { cookie });
+  const { data: cfgRes } = await call('/api/c/pharmkulen/admin/config', { cookie });
   const config = { ...cfgRes.config, wheelStyle: 'claw' };
-  const saved = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
+  const saved = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
   assert.equal(saved.res.status, 200);
   assert.equal(saved.data.config.wheelStyle, 'claw');
-  assert.equal((await call('/api/game')).data.wheelStyle, 'claw');
+  assert.equal((await call('/api/c/pharmkulen/game')).data.wheelStyle, 'claw');
 });
 
 test('each gift picture can have a background colour, or none', async () => {
   const cookie = await login();
-  const { data: cfgRes } = await call('/api/admin/config', { cookie });
+  const { data: cfgRes } = await call('/api/c/pharmkulen/admin/config', { cookie });
   const config = cfgRes.config;
   assert.equal(config.segments[0].imageBg, null); // none by default
   config.segments[0].imageBg = '#fff7e0';
   config.segments[1].imageBg = 'not-a-colour';
-  const saved = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
+  const saved = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
   assert.equal(saved.res.status, 200);
   assert.equal(saved.data.config.segments[0].imageBg, '#FFF7E0');
   assert.equal(saved.data.config.segments[1].imageBg, null);
-  const game = await call('/api/game');
+  const game = await call('/api/c/pharmkulen/game');
   assert.equal(game.data.segments.find((s) => s.id === config.segments[0].id).imageBg, '#FFF7E0');
 });
 
 test('a custom logo and icon can be set, are sent to players and can be reset', async () => {
   const cookie = await login();
   const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082', 'hex');
-  const up = await fetch(`${base}/api/admin/uploads`, { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'image/png' }, body: png });
+  const up = await fetch(`${base}/api/c/pharmkulen/admin/uploads`, { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'image/png' }, body: png });
   const { url } = await up.json();
-  const { data: cfgRes } = await call('/api/admin/config', { cookie });
+  const { data: cfgRes } = await call('/api/c/pharmkulen/admin/config', { cookie });
   assert.equal(cfgRes.config.branding.logo, null);
   const config = cfgRes.config;
   config.branding = { ...config.branding, logo: url, icon: url };
-  const saved = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
+  const saved = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', cookie, body: { version: cfgRes.version, config } });
   assert.equal(saved.res.status, 200);
-  assert.equal((await call('/api/game')).data.branding.icon, url);
+  assert.equal((await call('/api/c/pharmkulen/game')).data.branding.icon, url);
 
-  const bad = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: saved.data.version, config: { ...config, branding: { ...config.branding, logo: 'https://evil.example/x.png' } } } });
+  const bad = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', cookie, body: { version: saved.data.version, config: { ...config, branding: { ...config.branding, logo: 'https://evil.example/x.png' } } } });
   assert.equal(bad.res.status, 422);
 
-  const reset = await call('/api/admin/config', { method: 'PUT', cookie, body: { version: saved.data.version, config: { ...config, branding: { ...config.branding, logo: null, icon: null } } } });
+  const reset = await call('/api/c/pharmkulen/admin/config', { method: 'PUT', cookie, body: { version: saved.data.version, config: { ...config, branding: { ...config.branding, logo: null, icon: null } } } });
   assert.equal(reset.data.config.branding.logo, null);
 });

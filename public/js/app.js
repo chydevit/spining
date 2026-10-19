@@ -1,12 +1,16 @@
-// PharmKulen Spin — player game.
+// Spin — a company's player game (served at /c/<slug>).
 import { labelColorFor, monogram, pictureBox } from './wheel.js';
 import { Spinner } from './spinner.js';
-import { setBrand, brandMark } from './brand.js';
+import { setBrand, setCompany, brandMark } from './brand.js';
 import { getStyle } from './styles.js';
 import { Sound, confetti } from './fx.js';
 
 const $ = (id) => document.getElementById(id);
-const HISTORY_KEY = 'pk-spin-history';
+// The company comes from the page address: /c/<slug>
+const SLUG = location.pathname.match(/^\/c\/([a-z0-9-]+)/)?.[1] ?? '';
+const API = `/api/c/${SLUG}`;
+let companyName = '';
+const HISTORY_KEY = `pk-spin-history:${SLUG}`; // each company's results stay separate
 const SOUND_KEY = 'pk-spin-sound';
 const THEME_KEY = 'pk-spin-theme';
 const OLD_PLAYER_KEY = 'pk-spin-player'; // used by an earlier "Remember me" option
@@ -21,7 +25,7 @@ const state = {
 };
 
 const sound = new Sound(localStorage.getItem(SOUND_KEY) !== 'off');
-const wheel = new Spinner($('wheel'), { onTick: () => sound.tick(), label: 'PharmKulen prize wheel' });
+const wheel = new Spinner($('wheel'), { onTick: () => sound.tick(), label: 'Prize wheel' });
 
 // ---------- helpers ----------
 function loadHistory() {
@@ -137,7 +141,7 @@ buildStageLogos();
 function renderBranding(b) {
   setBrand(b);
   $('game-title').textContent = b.title;
-  document.title = `${b.title} · PharmKulen`;
+  document.title = `${b.title} · ${companyName}`;
   $('tagline').textContent = b.tagline;
   $('tagline').hidden = !b.tagline;
   $('spin-label').textContent = b.spinButtonLabel;
@@ -309,9 +313,18 @@ function sameSegments(a, b) {
   return a.length === b.length && a.every((s, i) => s.id === b[i].id && s.available === b[i].available);
 }
 
+/** Company name in the page text (claim note, privacy note, footer …) and the logo link. */
+function applyCompany(company) {
+  companyName = company.name;
+  setCompany(company);
+  for (const el of document.querySelectorAll('[data-company-name]')) el.textContent = company.name;
+  document.querySelector('.topbar .brand')?.setAttribute('href', `/c/${company.slug}`);
+}
+
 function applyGame(game) {
   const prevVersion = state.game?.version;
   state.game = game;
+  applyCompany(game.company);
   renderBranding(game.branding);
   if (!game.collectDetails) state.player = null;
   renderPlayer();
@@ -327,9 +340,11 @@ function applyGame(game) {
 
 async function loadGame() {
   try {
-    applyGame(await api('/api/game'));
+    applyGame(await api(`${API}/game`));
   } catch (err) {
-    $('spin-meta').textContent = 'We could not load the wheel. Check your connection and refresh.';
+    $('spin-meta').textContent = err.status === 404
+      ? 'This game does not exist (any more). Check the link you were given.'
+      : 'We could not load the wheel. Check your connection and refresh.';
     $('spin-meta').classList.add('is-error');
   }
 }
@@ -350,7 +365,7 @@ async function spin() {
     : {};
   let result;
   try {
-    result = await api('/api/spin', { method: 'POST', body: JSON.stringify(body) });
+    result = await api(`${API}/spin`, { method: 'POST', body: JSON.stringify(body) });
   } catch (err) {
     state.spinning = false;
     if (err.data?.status) state.game.status = err.data.status;
@@ -441,7 +456,7 @@ function celebrate(entry) {
   $('result-heading').textContent = entry.isPrize ? 'Congratulations!' : 'Thank you!';
   $('result-kicker').textContent = entry.isPrize ? 'You won' : 'You landed on';
   $('result-title').textContent = entry.label;
-  $('result-desc').textContent = entry.description || (entry.isPrize ? 'Enjoy your little gift from PharmKulen.' : 'We hope you have a lovely day!');
+  $('result-desc').textContent = entry.description || (entry.isPrize ? `Enjoy your little gift from ${companyName}.` : 'We hope you have a lovely day!');
   $('result-claim').hidden = !entry.code;
   $('claim-code').textContent = entry.code ?? '';
   $('copy-code').textContent = 'Copy';

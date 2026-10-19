@@ -1,9 +1,13 @@
-// PharmKulen Spin — admin console.
+// Spin — a company's admin console (served at /c/<slug>/admin, for the company's owner).
 import { Spinner } from './spinner.js';
-import { setBrand, DEFAULT_LOGO, DEFAULT_ICON } from './brand.js';
+import { setBrand, setCompany, brandDefaults } from './brand.js';
 import { WHEEL_STYLES, getStyle, resolveColors } from './styles.js';
 
 const $ = (id) => document.getElementById(id);
+// The company comes from the page address: /c/<slug>/admin
+const SLUG = location.pathname.match(/^\/c\/([a-z0-9-]+)/)?.[1] ?? '';
+const API = `/api/c/${SLUG}/admin`;
+if (!SLUG) location.replace('/account');
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const PALETTE = [
   { name: 'Bright blue', hex: '#19B2FF' },
@@ -75,7 +79,7 @@ async function api(path, { method = 'GET', body } = {}) {
   }
   let data = {};
   try { data = await res.json(); } catch { /* no body */ }
-  if (res.status === 401 && path !== '/api/admin/login') {
+  if (res.status === 401 && path !== '/api/auth/login') {
     showLogin('Your session ended. Sign in again — your unsaved changes are kept.');
   }
   if (!res.ok) throw Object.assign(new ApiError(data.error || `Request failed (${res.status}).`), { status: res.status, data });
@@ -137,7 +141,7 @@ function showLogin(notice) {
   $('login-notice').textContent = notice ?? '';
   $('login-error').textContent = '';
   $('login-password').value = '';
-  $('login-password').focus();
+  ($('login-email').value ? $('login-password') : $('login-email')).focus();
 }
 
 async function enterApp() {
@@ -153,21 +157,26 @@ async function enterApp() {
 $('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const pw = $('login-password');
+  const email = $('login-email');
   const err = $('login-error');
   const btn = $('login-submit');
   err.textContent = '';
   pw.removeAttribute('aria-invalid');
-  if (!pw.value) {
-    err.textContent = 'Enter the admin password.';
-    pw.setAttribute('aria-invalid', 'true');
-    pw.focus();
+  email.removeAttribute('aria-invalid');
+  if (!email.value.trim() || !pw.value) {
+    err.textContent = 'Enter your email and password.';
+    (email.value.trim() ? pw : email).setAttribute('aria-invalid', 'true');
+    (email.value.trim() ? pw : email).focus();
     return;
   }
   btn.disabled = true;
   btn.replaceChildren(h('span', { class: 'spinner', 'aria-hidden': 'true' }), ' Signing in…');
   try {
-    await api('/api/admin/login', { method: 'POST', body: { password: pw.value } });
+    await api('/api/auth/login', { method: 'POST', body: { email: email.value, password: pw.value } });
     pw.value = '';
+    const session = await api(`${API}/session`);
+    applySession(session);
+    if (!session.allowed) return showNoAccess(session);
     await enterApp();
     toast('Signed in.');
   } catch (ex) {
@@ -200,7 +209,7 @@ $('logout-btn').addEventListener('click', async () => {
     });
     if (!ok) return;
   }
-  try { await api('/api/admin/logout', { method: 'POST', body: {} }); } catch { /* ignore */ }
+  try { await api('/api/auth/logout', { method: 'POST', body: {} }); } catch { /* ignore */ }
   state.draft = null;
   state.server = null;
   updateDirty();
@@ -244,7 +253,7 @@ tabButtons.forEach((btn, i) => {
 
 // ================= Config: load / dirty / save =================
 async function loadConfig() {
-  const res = await api('/api/admin/config');
+  const res = await api(`${API}/config`);
   setServerConfig(res);
 }
 
@@ -325,7 +334,7 @@ async function save() {
   });
 
   try {
-    const res = await api('/api/admin/config', { method: 'PUT', body: { version: state.version, config: payload } });
+    const res = await api(`${API}/config`, { method: 'PUT', body: { version: state.version, config: payload } });
     setServerConfig(res);
     bar.hidden = false;
     bar.classList.add('is-saved');
@@ -574,7 +583,7 @@ async function uploadSegmentImage(index, file) {
   drop?.replaceChildren(h('span', { class: 'spinner' }));
   try {
     const blob = await prepareImage(file);
-    const res = await fetch('/api/admin/uploads', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': blob.type }, body: blob });
+    const res = await fetch(`${API}/uploads`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': blob.type }, body: blob });
     const data = await res.json().catch(() => ({}));
     if (res.status === 401) {
       showLogin('Your session ended. Sign in again — your unsaved changes are kept.');
@@ -617,12 +626,13 @@ $('segment-list').addEventListener('drop', (e) => {
 });
 
 // ----- Logo and icon (Branding tab) -----
-const BRAND_IMAGES = { logo: { fallback: DEFAULT_LOGO, maxSize: 800 }, icon: { fallback: DEFAULT_ICON, maxSize: 320 } };
+const BRAND_IMAGES = { logo: { maxSize: 800 }, icon: { maxSize: 320 } };
 
 function renderBrandImages() {
-  for (const [kind, { fallback }] of Object.entries(BRAND_IMAGES)) {
+  for (const kind of Object.keys(BRAND_IMAGES)) {
     const custom = state.draft.branding[kind];
-    $(`br-${kind}-img`).src = custom || fallback;
+    // No logo of its own: the preview shows the default icon (the game shows icon + company name).
+    $(`br-${kind}-img`).src = custom || brandDefaults()[kind] || brandDefaults().icon;
     $(`br-${kind}-btn`).textContent = custom ? 'Change' : 'Upload';
     $(`br-${kind}-reset`).hidden = !custom;
   }
@@ -633,7 +643,7 @@ async function uploadBrandImage(kind, file) {
   label.classList.add('is-busy');
   try {
     const blob = await prepareImage(file, BRAND_IMAGES[kind].maxSize);
-    const res = await fetch('/api/admin/uploads', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': blob.type }, body: blob });
+    const res = await fetch(`${API}/uploads`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': blob.type }, body: blob });
     const data = await res.json().catch(() => ({}));
     if (res.status === 401) {
       showLogin('Your session ended. Sign in again — your unsaved changes are kept.');
@@ -1038,7 +1048,7 @@ async function loadStats({ quiet = false } = {}) {
   const btn = $('refresh-stats');
   if (!quiet) btn.disabled = true;
   try {
-    state.stats = await api('/api/admin/stats');
+    state.stats = await api(`${API}/stats`);
     renderDashboard();
     if (state.tab === 'wheel' && !document.querySelector('#segment-list :focus')) renderSegments();
   } catch (err) {
@@ -1160,7 +1170,7 @@ $('recent-table').addEventListener('click', async (e) => {
   if (!btn) return;
   btn.disabled = true;
   try {
-    const { spin } = await api(`/api/admin/spins/${btn.dataset.redeem}/redeem`, { method: 'POST', body: { redeemed: btn.dataset.value === 'true' } });
+    const { spin } = await api(`${API}/spins/${btn.dataset.redeem}/redeem`, { method: 'POST', body: { redeemed: btn.dataset.value === 'true' } });
     toast(spin.redeemed ? `${spin.code} marked as handed out.` : `${spin.code} marked as not handed out.`);
     await loadStats({ quiet: true }); // also refreshes a filtered list
   } catch (err) {
@@ -1206,7 +1216,7 @@ async function runQuery() {
   if (state.searchQ) params.set('q', state.searchQ);
   if (state.day) params.set('day', state.day);
   try {
-    const res = await api(`/api/admin/spins?${params}`);
+    const res = await api(`${API}/spins?${params}`);
     if (id !== queryId) return; // a newer filter won
     lastResult = res;
     renderRecent(res.spins);
@@ -1276,7 +1286,7 @@ $('delete-day').addEventListener('click', async () => {
   });
   if (!ok) return;
   try {
-    const { deleted } = await api('/api/admin/spins/delete-day', { method: 'POST', body: { day, confirm: 'DELETE' } });
+    const { deleted } = await api(`${API}/spins/delete-day`, { method: 'POST', body: { day, confirm: 'DELETE' } });
     toast(`Deleted ${plural(deleted, 'spin')} from ${fmtDay(day)}.`);
     await loadStats({ quiet: true });
   } catch (err) {
@@ -1293,7 +1303,7 @@ $('reset-stats').addEventListener('click', async () => {
   });
   if (!ok) return;
   try {
-    await api('/api/admin/stats/reset', { method: 'POST', body: { confirm: 'RESET' } });
+    await api(`${API}/stats/reset`, { method: 'POST', body: { confirm: 'RESET' } });
     toast('Statistics were reset.');
     state.searchQ = '';
     state.day = '';
@@ -1431,7 +1441,7 @@ $('password-form').addEventListener('submit', async (e) => {
     input.focus();
   };
   if (!cur.value) return fail('Enter your current password.', cur);
-  if (next.value.length < 10) return fail('Use at least 10 characters for the new password.', next);
+  if (next.value.length < 8) return fail('Use at least 8 characters for the new password.', next);
   if (next.value !== conf.value) return fail('The new passwords do not match.', conf);
   if (next.value === cur.value) return fail('Choose a password that is different from the current one.', next);
 
@@ -1439,7 +1449,7 @@ $('password-form').addEventListener('submit', async (e) => {
   btn.disabled = true;
   btn.replaceChildren(h('span', { class: 'spinner', 'aria-hidden': 'true' }), ' Updating…');
   try {
-    await api('/api/admin/password', { method: 'POST', body: { currentPassword: cur.value, newPassword: next.value } });
+    await api('/api/auth/password', { method: 'POST', body: { currentPassword: cur.value, newPassword: next.value } });
     e.target.reset();
     toast('Password updated. Other devices were signed out.');
   } catch (ex) {
@@ -1478,13 +1488,37 @@ function confirmDialog({ title, body, confirmLabel = 'Confirm', danger = true, t
 }
 
 // ================= Start =================
+/** Company name, links and the signed-in account, from /admin/session. */
+function applySession({ company, user }) {
+  if (company) {
+    setCompany(company);
+    setBrand(state.draft?.branding ?? {});
+    for (const el of document.querySelectorAll('[data-company-name]')) el.textContent = company.name;
+    document.title = `Admin · ${company.name} · Spin`;
+    $('view-game').href = `/c/${company.slug}`;
+    $('export-xlsx').href = `${API}/export.xlsx`;
+    $('export-csv').href = `${API}/export.csv`;
+  }
+  if (user) {
+    $('account-email').textContent = user.email;
+    $('login-email').value = user.email;
+  }
+}
+
+function showNoAccess({ user }) {
+  showLogin(`You're signed in as ${user.email}, which doesn't own this company. Sign in with the owner's account, or go to your companies.`);
+}
+
 (async function init() {
   try {
-    const { authenticated } = await api('/api/admin/session');
-    if (authenticated) await enterApp();
+    const session = await api(`${API}/session`);
+    applySession(session);
+    if (session.allowed) await enterApp();
+    else if (session.authenticated) showNoAccess(session);
     else showLogin();
-  } catch {
-    showLogin('Could not reach the server. Check your connection and try again.');
+  } catch (err) {
+    if (err.status === 404) location.replace('/account');
+    else showLogin('Could not reach the server. Check your connection and try again.');
   }
 })();
 
